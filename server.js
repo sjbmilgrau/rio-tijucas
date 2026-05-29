@@ -49,10 +49,10 @@ async function getToken() {
   return token;
 }
 
+// formato yyyy-MM-dd
 function fmtData(d) {
-  // formato dd/MM/yyyy HH:mm:ss
   const p = n => String(n).padStart(2,'0');
-  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:00`;
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
 }
 
 app.get("/api/estacoes", (_req, res) => res.json(ESTACOES));
@@ -64,21 +64,21 @@ app.get("/api/dados/:codigo", async (req, res) => {
     const token = await getToken();
     const fetch = (await import("node-fetch")).default;
 
-    const fim   = new Date();
+    const fim    = new Date();
     const inicio = new Date(fim - dias * 24 * 3600 * 1000);
 
     const url =
       `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1` +
       `?CodigoDaEstacao=${codigo}` +
       `&TipoFiltroData=DATA_LEITURA` +
-      `&DataInicio=${encodeURIComponent(fmtData(inicio))}` +
-      `&DataFim=${encodeURIComponent(fmtData(fim))}`;
+      `&DataInicio=${fmtData(inicio)}` +
+      `&DataFim=${fmtData(fim)}`;
 
     console.log("Chamando ANA:", url);
 
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const txt = await r.text();
-    console.log("Resposta ANA status:", r.status, txt.slice(0,200));
+    console.log("Resposta ANA status:", r.status, txt.slice(0,300));
     if (!r.ok) return res.status(r.status).json({ erro: txt });
     res.json(JSON.parse(txt));
   } catch (err) {
