@@ -1,7 +1,6 @@
 require('dotenv').config();
 const express = require("express");
 const cors    = require("cors");
-
 const app = express();
 
 const ANA_ID   = process.env.ANA_ID;
@@ -48,19 +47,15 @@ app.get("/api/dados/:codigo", async (req, res) => {
     const token = await getToken();
     const fetch = (await import("node-fetch")).default;
 
-    // Usando os nomes de parâmetros em português conforme o Swagger da ANA
-    const params = new URLSearchParams({
-      "Código da Estação": codigo,
-      "Tipo Filtro Data": "DADOS_LEITURA",
-      "Range Intervalo de busca": "DIAS_2"
-    });
+    const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
+      `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
+      `&TipoFiltroData=DATA_LEITURA` +
+      `&Range%20Intervalo%20de%20busca=DIAS_2`;
 
-    const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?${params}`;
     console.log("Chamando ANA:", url);
-
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const txt = await r.text();
-    console.log("Resposta ANA status:", r.status, txt.slice(0,300));
+    console.log("Resposta ANA status:", r.status, txt.slice(0, 300));
     if (!r.ok) return res.status(r.status).send(txt);
     res.json(JSON.parse(txt));
   } catch (err) {
