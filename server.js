@@ -61,7 +61,7 @@ app.get("/api/dados/:codigo", async (req, res) => {
       `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1` +
       `?CodigoDaEstacao=${codigo}` +
       `&TipoFiltroData=DATA_LEITURA` +
-      `&RangeIntervaloDeBusca=ULTIMAS_24_HORAS`;
+      `&RangeIntervaloDeBusca=DIAS_2`;
 
     console.log("Chamando ANA:", url);
 
