@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const cors    = require("cors");
+const path    = require("path");
 const app = express();
 
 const ANA_ID   = process.env.ANA_ID;
@@ -9,18 +10,48 @@ const DOMINIO  = process.env.SITE_DOMINIO || "https://www.sjbmilgrau.com.br";
 const PORT     = process.env.PORT || 3000;
 const ANA_BASE = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas";
 
-app.use(cors({
+// Domínios permitidos (com e sem www)
+const DOMINIOS_PERMITIDOS = [
+  DOMINIO,
+  DOMINIO.replace("https://","https://www."),
+  DOMINIO.replace("https://www.","https://"),
+  // Permite acesso direto ao Render (para testes)
+  "https://rio-tijucas.onrender.com"
+];
+
+// CORS para a API
+app.use('/api', cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    const allowed = [
-      DOMINIO,
-      DOMINIO.replace("https://","https://www."),
-      DOMINIO.replace("https://www.","https://")
-    ];
-    if (allowed.includes(origin)) return callback(null, true);
+    if (DOMINIOS_PERMITIDOS.includes(origin)) return callback(null, true);
     callback(new Error("Domínio não autorizado: " + origin));
   }
 }));
+
+// Proteção do widget.html — só carrega dentro do seu site
+app.get("/widget", (req, res) => {
+  const referer = req.headers.referer || "";
+  const origem  = req.headers.origin  || "";
+
+  const autorizado = DOMINIOS_PERMITIDOS.some(d =>
+    referer.startsWith(d) || origem.startsWith(d)
+  );
+
+  // Permite acesso direto (sem referer) para o Render servir normalmente
+  if (!referer && !origem) {
+    return res.sendFile(path.join(__dirname, "widget.html"));
+  }
+
+  if (!autorizado) {
+    return res.status(403).send(`
+      <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666">
+        <p>Widget disponível apenas em sjbmilgrau.com.br</p>
+      </body></html>
+    `);
+  }
+
+  res.sendFile(path.join(__dirname, "widget.html"));
+});
 
 app.use(express.static(__dirname));
 
