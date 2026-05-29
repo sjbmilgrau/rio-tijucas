@@ -10,13 +10,6 @@ const DOMINIO  = process.env.SITE_DOMINIO || "https://www.sjbmilgrau.com.br";
 const PORT     = process.env.PORT || 3000;
 const ANA_BASE = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas";
 
-const ESTACOES = [
-  { codigo: "83827000", nome: "Tijucas (Cidade)",  municipio: "Tijucas/SC"       },
-  { codigo: "83813000", nome: "Nova Trento",        municipio: "Nova Trento/SC"   },
-  { codigo: "83838000", nome: "Major Gercino",      municipio: "Major Gercino/SC" },
-  { codigo: "83822000", nome: "Canelinha",           municipio: "Canelinha/SC"    },
-];
-
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -49,7 +42,23 @@ async function getToken() {
   return token;
 }
 
-app.get("/api/estacoes", (_req, res) => res.json(ESTACOES));
+// Rota de diagnóstico — busca estações do Rio Tijucas para achar o código certo
+app.get("/api/diagnostico", async (req, res) => {
+  try {
+    const token = await getToken();
+    const fetch = (await import("node-fetch")).default;
+
+    // Busca inventário de estações pelo nome do rio
+    const url = `${ANA_BASE}/HidroInventarioEstacoes/v1?NomeRio=Tijucas&UF=SC`;
+    console.log("Buscando estações:", url);
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const txt = await r.text();
+    console.log("Status:", r.status, txt.slice(0,500));
+    res.send(`<pre>Status: ${r.status}\n\n${txt}</pre>`);
+  } catch (err) {
+    res.status(500).send("Erro: " + err.message);
+  }
+});
 
 app.get("/api/dados/:codigo", async (req, res) => {
   const { codigo } = req.params;
@@ -57,21 +66,21 @@ app.get("/api/dados/:codigo", async (req, res) => {
     const token = await getToken();
     const fetch = (await import("node-fetch")).default;
 
+    // Testa diferentes formatos de intervalo
+    const intervalo = req.query.intervalo || "DIAS_2";
     const url =
       `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1` +
       `?CodigoDaEstacao=${codigo}` +
       `&TipoFiltroData=DATA_LEITURA` +
-      `&RangeIntervaloDeBusca=DIAS_2`;
+      `&RangeIntervaloDeBusca=${intervalo}`;
 
     console.log("Chamando ANA:", url);
-
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const txt = await r.text();
     console.log("Resposta ANA status:", r.status, txt.slice(0,300));
-    if (!r.ok) return res.status(r.status).json({ erro: txt });
+    if (!r.ok) return res.status(r.status).send(txt);
     res.json(JSON.parse(txt));
   } catch (err) {
-    console.error("Erro:", err.message);
     res.status(500).json({ erro: err.message });
   }
 });
