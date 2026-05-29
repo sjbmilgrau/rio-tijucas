@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nível do Rio Tijucas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:transparent;display:flex;justify-content:center;align-items:center;min-height:100vh;padding:12px}
+.rt-scene{font-family:'Inter',sans-serif;width:100%;max-width:620px;min-height:260px;border-radius:28px;position:relative;overflow:hidden;padding:28px 32px 24px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6);transition:background 1.2s ease;background:linear-gradient(145deg,#d8eaf5 0%,#b8d4ee 40%,#98bfe8 100%)}
+.rt-scene.rising{background:linear-gradient(145deg,#f5e8d8 0%,#f0d4b0 40%,#e8c090 100%)}
+.rt-scene.falling{background:linear-gradient(145deg,#d8eaf5 0%,#b8d4ee 40%,#98bfe8 100%)}
+.rt-scene.stable{background:linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%)}
+.rt-rain{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.2s}
+.rt-rain.on{opacity:1}
+.rt-drop{position:absolute;width:1.5px;border-radius:2px;animation:rtfall linear infinite;opacity:.5}
+@keyframes rtfall{from{transform:translateY(-40px)}to{transform:translateY(400px)}}
+.rt-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;position:relative;z-index:2}
+.rt-logo-box{width:46px;height:46px;border-radius:14px;background:rgba(255,255,255,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.rt-logo-fallback{font-size:13px;font-weight:700;color:#185FA5;letter-spacing:-.5px}
+.rt-logo-area{display:flex;align-items:center;gap:12px}
+.rt-title{font-size:16px;font-weight:600;color:#1a2e44;letter-spacing:-.3px}
+.rt-sub{font-size:12px;color:rgba(30,50,80,.6);margin-top:1px}
+.rt-dots{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;gap:3px}
+.rt-dot{width:4px;height:4px;border-radius:50%;background:#5a7a9a}
+.rt-body{display:flex;align-items:center;flex:1;position:relative;z-index:2}
+.rt-left{flex:1;display:flex;flex-direction:column}
+.rt-num{font-size:76px;font-weight:900;letter-spacing:-4px;line-height:1;color:#1a2e44;transition:color .6s;font-variant-numeric:tabular-nums}
+.rt-unit{font-size:18px;font-weight:400;color:rgba(30,50,80,.55);margin-top:6px}
+.rt-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.5);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:6px 14px;font-size:13px;font-weight:500;color:#2a4a6a;margin-top:14px;width:fit-content;transition:all .6s}
+.rt-scene.rising .rt-num{color:#7a3a0a}
+.rt-scene.rising .rt-pill{color:#7a3a0a;background:rgba(255,220,170,.5)}
+.rt-scene.falling .rt-num{color:#0a3a6a}
+.rt-scene.falling .rt-pill{color:#0a3a6a;background:rgba(180,220,255,.5)}
+.rt-div{width:1px;background:rgba(30,60,100,.12);align-self:stretch;margin:0 28px;flex-shrink:0}
+.rt-right{width:210px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.rt-gauge{position:relative;width:100%;height:140px}
+.rt-ruler{position:absolute;left:8px;top:10px;width:16px;height:116px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end}
+.rt-tick{height:1px;background:rgba(30,60,100,.2)}
+.rt-tick.maj{width:14px;background:rgba(30,60,100,.35)}
+.rt-tick.min{width:7px}
+.rt-water-scene{position:absolute;left:30px;right:0;top:10px;height:120px;overflow:hidden;border-radius:0 12px 12px 0}
+.rt-water-body{position:absolute;bottom:0;left:0;right:0;transition:height 1.6s cubic-bezier(.4,0,.2,1)}
+.rt-wave1{position:absolute;top:-18px;left:0;width:200%;animation:rtwv1 2.8s linear infinite}
+.rt-wave2{position:absolute;top:-10px;left:0;width:200%;animation:rtwv2 3.9s linear infinite;opacity:.5}
+@keyframes rtwv1{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes rtwv2{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+#rtFill{position:absolute;top:20px;bottom:0;left:0;right:0;transition:background .6s}
+.rt-arrow-wrap{position:absolute;right:10px;top:10px}
+.rt-arrow{transition:transform .7s cubic-bezier(.4,0,.2,1)}
+.rt-arrow.up{transform:rotate(0deg)}
+.rt-arrow.down{transform:rotate(180deg)}
+.rt-arrow.stable{transform:rotate(-90deg)}
+.rt-time{text-align:center}
+.rt-time-lbl{font-size:11px;color:rgba(30,50,80,.55);letter-spacing:.5px;text-transform:uppercase}
+.rt-time-val{font-size:15px;font-weight:600;color:#1a2e44;margin-top:3px;letter-spacing:-.2px}
+.rt-footer{display:flex;align-items:center;justify-content:space-between;margin-top:18px;position:relative;z-index:2}
+.rt-footer-src{font-size:11px;color:rgba(30,50,80,.45)}
+.rt-more{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.45);border:1px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;color:#5a7a9a;font-size:16px}
+</style>
+</head>
+<body>
+<div class="rt-scene stable" id="rtScene">
+  <div class="rt-rain" id="rtRain"></div>
+  <div class="rt-header">
+    <div class="rt-logo-area">
+      <div class="rt-logo-box">
+        <span class="rt-logo-fallback">SJB</span>
+      </div>
+      <div>
+        <div class="rt-title">Nível do Rio Tijucas</div>
+        <div class="rt-sub">Monitoramento em tempo real</div>
+      </div>
+    </div>
+    <div class="rt-dots"><div class="rt-dot"></div><div class="rt-dot"></div><div class="rt-dot"></div></div>
+  </div>
+  <div class="rt-body">
+    <div class="rt-left">
+      <div class="rt-num" id="rtNum">—</div>
+      <div class="rt-unit">metros</div>
+      <div class="rt-pill" id="rtPill"><span id="rtIcon">—</span> <span id="rtLabel">Carregando...</span></div>
+    </div>
+    <div class="rt-div"></div>
+    <div class="rt-right">
+      <div class="rt-gauge">
+        <div class="rt-ruler" id="rtRuler"></div>
+        <div class="rt-water-scene">
+          <div class="rt-water-body" id="rtWaterBody" style="height:30px">
+            <svg class="rt-wave1" viewBox="0 0 800 24" preserveAspectRatio="none" height="24">
+              <path id="rtW1" fill="rgba(55,138,221,.75)" d="M0,12 C100,0 200,24 400,12 C600,0 700,24 800,12 L800,24 L0,24Z"/>
+            </svg>
+            <svg class="rt-wave2" viewBox="0 0 800 24" preserveAspectRatio="none" height="24">
+              <path id="rtW2" fill="rgba(55,138,221,.4)" d="M0,8 C150,20 300,4 400,14 C500,22 650,2 800,10 L800,24 L0,24Z"/>
+            </svg>
+            <div id="rtFill" style="position:absolute;top:20px;bottom:0;left:0;right:0;background:rgba(55,138,221,.55)"></div>
+          </div>
+        </div>
+        <div class="rt-arrow-wrap">
+          <svg class="rt-arrow stable" id="rtArrow" width="38" height="38" viewBox="0 0 38 38">
+            <defs>
+              <linearGradient id="rtGfall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#378ADD"/><stop offset="100%" stop-color="#0C447C"/></linearGradient>
+              <linearGradient id="rtGrise" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#EF9F27"/><stop offset="100%" stop-color="#993C1D"/></linearGradient>
+              <linearGradient id="rtGstable" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#5DCAA5"/><stop offset="100%" stop-color="#0F6E56"/></linearGradient>
+            </defs>
+            <circle cx="19" cy="19" r="18" id="rtArrowCircle" fill="url(#rtGstable)" opacity=".93"/>
+            <path d="M19 11L19 27M12 20L19 27L26 20" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+      </div>
+      <div class="rt-time">
+        <div class="rt-time-lbl">Última atualização</div>
+        <div class="rt-time-val" id="rtTime">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="rt-footer">
+    <span class="rt-footer-src">ANA · SNIRH</span>
+    <div class="rt-more">›</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var API_BASE  = 'https://rio-tijucas.onrender.com';
+  var ESTACAO   = '84095500';
+  var INTERVALO = 5 * 60 * 1000;
+  var MAX=8, WATER_H=120;
+  var rainOn=false;
+
+  function buildRuler(){
+    var r=document.getElementById('rtRuler');r.innerHTML='';
+    for(var i=0;i<13;i++){var d=document.createElement('div');d.className='rt-tick '+(i%3===0?'maj':'min');r.appendChild(d);}
+  }
+  function pad(n){return String(n).padStart(2,'0');}
+  function fmtNum(n){return n.toFixed(2).replace('.',',');}
+  function fmtTime(d){return pad(d.getHours())+'h'+pad(d.getMinutes())+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2);}
+
+  function render(lv,md){
+    var scene=document.getElementById('rtScene');
+    scene.className='rt-scene '+md;
+    document.getElementById('rtNum').textContent=lv!==null?fmtNum(lv):'—';
+    var pct=lv!==null?Math.min(Math.max(lv/MAX,0.04),0.97):0.15;
+    document.getElementById('rtWaterBody').style.height=Math.round(pct*WATER_H)+'px';
+    var icons={rising:'↑',falling:'↓',stable:'—'};
+    var texts={rising:'Rio subindo',falling:'Rio baixando',stable:'Nível estável'};
+    document.getElementById('rtIcon').textContent=icons[md]||'—';
+    document.getElementById('rtLabel').textContent=texts[md]||'Aguardando dados';
+    var rising=(md==='rising');
+    document.getElementById('rtW1').setAttribute('fill',rising?'rgba(210,110,40,.7)':'rgba(55,138,221,.75)');
+    document.getElementById('rtW2').setAttribute('fill',rising?'rgba(210,110,40,.38)':'rgba(55,138,221,.4)');
+    document.getElementById('rtFill').style.background=rising?'rgba(210,110,40,.5)':'rgba(55,138,221,.55)';
+    var arrow=document.getElementById('rtArrow');
+    arrow.className='rt-arrow '+(md==='rising'?'up':md==='falling'?'down':'stable');
+    document.getElementById('rtArrowCircle').setAttribute('fill',
+      md==='rising'?'url(#rtGrise)':md==='stable'?'url(#rtGstable)':'url(#rtGfall)');
+    document.getElementById('rtTime').textContent=fmtTime(new Date());
+  }
+
+  function buildDrops(){
+    var l=document.getElementById('rtRain');l.innerHTML='';
+    for(var i=0;i<60;i++){
+      var d=document.createElement('div');d.className='rt-drop';
+      var h=8+Math.random()*16;
+      d.style.cssText='left:'+Math.random()*100+'%;top:'+-Math.random()*100+'px;height:'+h+'px;background:rgba(100,165,230,'+(0.3+Math.random()*0.3)+');animation-duration:'+(0.5+Math.random()*0.55)+'s;animation-delay:'+-Math.random()*1.5+'s;';
+      l.appendChild(d);
+    }
+  }
+
+  function setRain(on){
+    if(on===rainOn)return;
+    rainOn=on;
+    if(on)buildDrops();
+    document.getElementById('rtRain').classList.toggle('on',on);
+  }
+
+  async function fetchDados(){
+    try{
+      var r=await fetch(API_BASE+'/api/dados/'+ESTACAO);
+      if(!r.ok)return;
+      var json=await r.json();
+      var items=json.items;
+      if(!items||!items.length)return;
+      items.sort(function(a,b){return new Date(a.Data_Hora_Medicao)-new Date(b.Data_Hora_Medicao);});
+      var last=items[items.length-1];
+      var prev=items.length>1?items[items.length-2]:null;
+      var lv=parseFloat(last.Cota_Adotada)/100;
+      var pv=prev?parseFloat(prev.Cota_Adotada)/100:lv;
+      var chuva=parseFloat(last.Chuva_Adotada||0);
+      var md=lv>pv+0.01?'rising':lv<pv-0.01?'falling':'stable';
+      render(lv,md);
+      setRain(chuva>0.5);
+    }catch(e){console.warn('Rio Tijucas:',e);}
+  }
+
+  buildRuler();
+  render(null,'stable');
+  fetchDados();
+  setInterval(fetchDados,INTERVALO);
+})();
+</script>
+</body>
+</html>
