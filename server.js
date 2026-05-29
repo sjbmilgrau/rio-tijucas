@@ -49,30 +49,19 @@ async function getToken() {
   return token;
 }
 
-// formato yyyy-MM-dd
-function fmtData(d) {
-  const p = n => String(n).padStart(2,'0');
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
-}
-
 app.get("/api/estacoes", (_req, res) => res.json(ESTACOES));
 
 app.get("/api/dados/:codigo", async (req, res) => {
   const { codigo } = req.params;
-  const dias = Math.min(parseInt(req.query.dias || "2"), 30);
   try {
     const token = await getToken();
     const fetch = (await import("node-fetch")).default;
-
-    const fim    = new Date();
-    const inicio = new Date(fim - dias * 24 * 3600 * 1000);
 
     const url =
       `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1` +
       `?CodigoDaEstacao=${codigo}` +
       `&TipoFiltroData=DATA_LEITURA` +
-      `&DataInicio=${fmtData(inicio)}` +
-      `&DataFim=${fmtData(fim)}`;
+      `&RangeIntervaloDeBusca=ULTIMAS_24_HORAS`;
 
     console.log("Chamando ANA:", url);
 
