@@ -25,23 +25,11 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 .rt-scene.falling{background:linear-gradient(145deg,#d8eaf5 0%,#b8d4ee 40%,#98bfe8 100%)}
 .rt-scene.stable {background:linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%)}
 
-/* logo de fundo */
-.rt-bg-logo{
-  position:absolute;right:-10px;bottom:-10px;
-  width:160px;height:160px;
-  object-fit:contain;
-  opacity:0.07;
-  pointer-events:none;
-  z-index:0;
-}
-
-/* rain */
 .rt-rain{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.2s}
 .rt-rain.on{opacity:1}
 .rt-drop{position:absolute;width:1.5px;border-radius:2px;animation:rtfall linear infinite;opacity:.5}
 @keyframes rtfall{from{transform:translateY(-40px)}to{transform:translateY(400px)}}
 
-/* header */
 .rt-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;position:relative;z-index:2}
 .rt-logo-box{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
 .rt-logo-box img{width:28px;height:28px;object-fit:contain}
@@ -50,7 +38,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 .rt-title{font-size:14px;font-weight:600;color:#1a2e44;letter-spacing:-.3px}
 .rt-sub{font-size:11px;color:rgba(30,50,80,.6);margin-top:1px}
 
-/* body */
 .rt-body{display:flex;align-items:center;flex:1;position:relative;z-index:2}
 .rt-left{flex:1;display:flex;flex-direction:column}
 .rt-num{font-size:62px;font-weight:900;letter-spacing:-3px;line-height:1;color:#1a2e44;transition:color .6s;font-variant-numeric:tabular-nums}
@@ -64,7 +51,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 
 .rt-div{width:1px;background:rgba(30,60,100,.12);align-self:stretch;margin:0 20px;flex-shrink:0}
 
-/* right */
 .rt-right{width:180px;display:flex;flex-direction:column;align-items:center;gap:6px}
 .rt-gauge{position:relative;width:100%;height:110px}
 
@@ -74,6 +60,20 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 .rt-tick.min{width:6px}
 
 .rt-water-scene{position:absolute;left:26px;right:0;top:8px;height:96px;overflow:hidden;border-radius:0 10px 10px 0}
+
+/* LOGO dentro da área de água */
+.rt-water-logo{
+  position:absolute;
+  left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  width:110px;height:110px;
+  object-fit:contain;
+  opacity:0.30;
+  pointer-events:none;
+  z-index:2;
+  filter:brightness(0) invert(1);
+}
+
 .rt-water-body{position:absolute;bottom:0;left:0;right:0;transition:height 1.6s cubic-bezier(.4,0,.2,1)}
 .rt-wave1{position:absolute;top:-14px;left:0;width:200%;animation:rtwv1 2.8s linear infinite}
 .rt-wave2{position:absolute;top:-8px;left:0;width:200%;animation:rtwv2 3.9s linear infinite;opacity:.5}
@@ -81,18 +81,15 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 @keyframes rtwv2{from{transform:translateX(-50%)}to{transform:translateX(0)}}
 #rtFill{position:absolute;top:16px;bottom:0;left:0;right:0;transition:background .6s}
 
-/* arrow */
-.rt-arrow-wrap{position:absolute;right:8px;top:8px}
+.rt-arrow-wrap{position:absolute;right:8px;top:8px;z-index:4}
 .rt-arrow{transition:transform .7s cubic-bezier(.4,0,.2,1)}
-.rt-arrow.up    {transform:rotate(0deg)}
-.rt-arrow.down  {transform:rotate(180deg)}
+.rt-arrow.up{transform:rotate(0deg)}
+.rt-arrow.down{transform:rotate(180deg)}
 
-/* time */
 .rt-time{text-align:center}
 .rt-time-lbl{font-size:10px;color:rgba(30,50,80,.55);letter-spacing:.5px;text-transform:uppercase}
 .rt-time-val{font-size:13px;font-weight:600;color:#1a2e44;margin-top:2px;letter-spacing:-.2px}
 
-/* footer */
 .rt-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;position:relative;z-index:2}
 .rt-footer-src{font-size:10px;color:rgba(30,50,80,.45)}
 .rt-dev{font-size:9px;color:rgba(30,50,80,.35);font-weight:500;letter-spacing:.3px;text-transform:uppercase}
@@ -101,13 +98,10 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 <div class="rt-scene stable" id="rtScene">
   <div class="rt-rain" id="rtRain"></div>
 
-  <!-- Logo de fundo com transparência -->
-  <img class="rt-bg-logo" src="https://www.sjbmilgrau.com.br/wp-content/uploads/2025/03/sjbmilgrau-logo.png" alt="" onerror="this.style.display='none'">
-
   <div class="rt-header">
     <div class="rt-logo-area">
       <div class="rt-logo-box">
-        <img src="https://www.sjbmilgrau.com.br/wp-content/uploads/2025/03/sjbmilgrau-logo.png" alt="SJB" onerror="this.style.display='none';document.getElementById('rtLogoFb').style.display='block'">
+        <img src="https://www.sjbmilgrau.com.br/wp-content/uploads/2026/05/IMG_7585.png" alt="SJB" onerror="this.style.display='none';document.getElementById('rtLogoFb').style.display='block'">
         <span class="rt-logo-fallback" id="rtLogoFb" style="display:none">SJB</span>
       </div>
       <div>
@@ -130,6 +124,8 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
       <div class="rt-gauge">
         <div class="rt-ruler" id="rtRuler"></div>
         <div class="rt-water-scene">
+          <!-- Logo dentro da área de água -->
+          <img class="rt-water-logo" src="https://www.sjbmilgrau.com.br/wp-content/uploads/2026/05/IMG_7585.png" alt="">
           <div class="rt-water-body" id="rtWaterBody" style="height:20px">
             <svg class="rt-wave1" viewBox="0 0 800 20" preserveAspectRatio="none" height="20">
               <path id="rtW1" fill="rgba(55,138,221,.75)" d="M0,10 C100,0 200,20 400,10 C600,0 700,20 800,10 L800,20 L0,20Z"/>
@@ -140,7 +136,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
             <div id="rtFill" style="position:absolute;top:16px;bottom:0;left:0;right:0;background:rgba(55,138,221,.55)"></div>
           </div>
         </div>
-        <!-- Seta: só aparece se rising ou falling -->
         <div class="rt-arrow-wrap" id="rtArrowWrap" style="display:none">
           <svg class="rt-arrow up" id="rtArrow" width="32" height="32" viewBox="0 0 38 38">
             <defs>
@@ -193,13 +188,11 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
     document.getElementById('rtIcon').textContent=icons[md]||'';
     document.getElementById('rtLabel').textContent=texts[md]||'Aguardando dados';
 
-    // Água muda de cor
     var rising=(md==='rising');
     document.getElementById('rtW1').setAttribute('fill',rising?'rgba(210,110,40,.7)':'rgba(55,138,221,.75)');
     document.getElementById('rtW2').setAttribute('fill',rising?'rgba(210,110,40,.38)':'rgba(55,138,221,.4)');
     document.getElementById('rtFill').style.background=rising?'rgba(210,110,40,.5)':'rgba(55,138,221,.55)';
 
-    // Seta: só mostra se subindo ou baixando
     var arrowWrap=document.getElementById('rtArrowWrap');
     var arrow=document.getElementById('rtArrow');
     var circle=document.getElementById('rtArrowCircle');
@@ -210,7 +203,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
       arrow.className='rt-arrow '+(md==='rising'?'up':'down');
       circle.setAttribute('fill',md==='rising'?'url(#rtGrise)':'url(#rtGfall)');
     }
-
     document.getElementById('rtTime').textContent=fmtTime(new Date());
   }
 
