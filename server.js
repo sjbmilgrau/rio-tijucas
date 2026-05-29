@@ -48,7 +48,7 @@ app.get("/api/dados/:codigo", async (req, res) => {
     const fetch = (await import("node-fetch")).default;
 
     const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
-      `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
+      `CXC3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
       `&TipoFiltroData=DATA_LEITURA` +
       `&Range%20Intervalo%20de%20busca=DIAS_2`;
 
