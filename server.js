@@ -42,45 +42,29 @@ async function getToken() {
   return token;
 }
 
-// Rota de diagnóstico — busca estações do Rio Tijucas para achar o código certo
-app.get("/api/diagnostico", async (req, res) => {
-  try {
-    const token = await getToken();
-    const fetch = (await import("node-fetch")).default;
-
-    // Busca inventário de estações pelo nome do rio
-    const url = `${ANA_BASE}/HidroInventarioEstacoes/v1?NomeRio=Tijucas&UF=SC`;
-    console.log("Buscando estações:", url);
-    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    const txt = await r.text();
-    console.log("Status:", r.status, txt.slice(0,500));
-    res.send(`<pre>Status: ${r.status}\n\n${txt}</pre>`);
-  } catch (err) {
-    res.status(500).send("Erro: " + err.message);
-  }
-});
-
 app.get("/api/dados/:codigo", async (req, res) => {
   const { codigo } = req.params;
   try {
     const token = await getToken();
     const fetch = (await import("node-fetch")).default;
 
-    // Testa diferentes formatos de intervalo
-    const intervalo = req.query.intervalo || "DIAS_2";
-    const url =
-      `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1` +
-      `?CodigoDaEstacao=${codigo}` +
-      `&TipoFiltroData=DADOS_LEITURA` +
-      `&RangeIntervaloDeBusca=${intervalo}`;
+    // Usando os nomes de parâmetros em português conforme o Swagger da ANA
+    const params = new URLSearchParams({
+      "Código da Estação": codigo,
+      "Tipo Filtro Data": "DADOS_LEITURA",
+      "Range Intervalo de busca": "DIAS_2"
+    });
 
+    const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?${params}`;
     console.log("Chamando ANA:", url);
+
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const txt = await r.text();
     console.log("Resposta ANA status:", r.status, txt.slice(0,300));
     if (!r.ok) return res.status(r.status).send(txt);
     res.json(JSON.parse(txt));
   } catch (err) {
+    console.error("Erro:", err.message);
     res.status(500).json({ erro: err.message });
   }
 });
