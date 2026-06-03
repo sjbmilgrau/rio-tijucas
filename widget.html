@@ -87,8 +87,9 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 .rt-arrow.down{transform:rotate(0deg)}
 
 .rt-time{text-align:center}
-.rt-time-lbl{font-size:10px;color:rgba(30,50,80,.55);letter-spacing:.5px;text-transform:uppercase}
-.rt-time-val{font-size:13px;font-weight:600;color:#1a2e44;margin-top:2px;letter-spacing:-.2px}
+.rt-time-lbl{font-size:9px;color:rgba(30,50,80,.55);letter-spacing:.5px;text-transform:uppercase}
+.rt-time-val{font-size:12px;font-weight:600;color:#1a2e44;margin-top:1px;letter-spacing:-.2px}
+.rt-time-next{font-size:9px;color:rgba(30,50,80,.45);margin-top:3px}
 
 .rt-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;position:relative;z-index:2}
 .rt-footer-src{font-size:10px;color:rgba(30,50,80,.45)}
@@ -148,8 +149,9 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
         </div>
       </div>
       <div class="rt-time">
-        <div class="rt-time-lbl">Última atualização</div>
+        <div class="rt-time-lbl">Última leitura ANA</div>
         <div class="rt-time-val" id="rtTime">—</div>
+        <div class="rt-time-next" id="rtNext">Próxima: —</div>
       </div>
     </div>
   </div>
@@ -175,8 +177,19 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   function pad(n){return String(n).padStart(2,'0');}
   function fmtNum(n){return n.toFixed(2).replace('.',',');}
   function fmtTime(d){return pad(d.getHours())+'h'+pad(d.getMinutes())+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2);}
+  function proxAtualizacao(){
+    var now=new Date();
+    var min=now.getMinutes();
+    var proxMin=[0,15,30,45,60].find(function(m){return m>min;});
+    var prox=new Date(now);
+    if(proxMin===60){prox.setHours(prox.getHours()+1);prox.setMinutes(0);}
+    else{prox.setMinutes(proxMin);}
+    prox.setSeconds(0);
+    var diff=Math.round((prox-now)/60000);
+    return 'Próxima: '+pad(prox.getHours())+'h'+pad(prox.getMinutes())+' (em '+diff+'min)';
+  }
 
-  function render(lv,md){
+  function render(lv,md,dataLeitura){
     var scene=document.getElementById('rtScene');
     scene.className='rt-scene '+md;
     document.getElementById('rtNum').textContent=lv!==null?fmtNum(lv):'—';
@@ -203,7 +216,8 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
       arrow.className='rt-arrow '+(md==='rising'?'up':'down');
       circle.setAttribute('fill',md==='rising'?'url(#rtGrise)':'url(#rtGfall)');
     }
-    document.getElementById('rtTime').textContent=fmtTime(new Date());
+    document.getElementById('rtTime').textContent=fmtTime(dataLeitura||new Date());
+    document.getElementById('rtNext').textContent=proxAtualizacao();
   }
 
   function buildDrops(){
@@ -233,11 +247,15 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
       items.sort(function(a,b){return new Date(a.Data_Hora_Medicao)-new Date(b.Data_Hora_Medicao);});
       var last=items[items.length-1];
       var prev=items.length>1?items[items.length-2]:null;
-      var lv=parseFloat(last.Cota_Adotada)/100;
-      var pv=prev?parseFloat(prev.Cota_Adotada)/100:lv;
+      var cota=parseFloat(last.Cota_Adotada);
+      var lv=Math.abs(cota)/100;
+      var cotaAtual=parseFloat(last.Cota_Adotada);
+      var cotaAnterior=prev?parseFloat(prev.Cota_Adotada):cotaAtual;
+      var pv=Math.abs(cotaAnterior)/100;
       var chuva=parseFloat(last.Chuva_Adotada||0);
-      var md=lv>pv+0.01?'rising':lv<pv-0.01?'falling':'stable';
-      render(lv,md);
+      var md=cotaAtual>cotaAnterior+0.5?'rising':cotaAtual<cotaAnterior-0.5?'falling':'stable';
+      var dataLeitura=last.Data_Hora_Medicao?new Date(last.Data_Hora_Medicao.replace(' ','T')):new Date();
+      render(lv,md,dataLeitura);
       setRain(chuva>0.5);
     }catch(e){console.warn('Rio Tijucas:',e);}
   }
