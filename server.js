@@ -3,6 +3,7 @@ const express = require("express");
 const cors    = require("cors");
 const path    = require("path");
 const app = express();
+
 const ANA_ID   = process.env.ANA_ID;
 const ANA_PASS = process.env.ANA_PASS;
 const DOMINIO  = process.env.SITE_DOMINIO || "https://www.sjbmilgrau.com.br";
@@ -14,6 +15,7 @@ const DOMINIOS_PERMITIDOS = [
   DOMINIO,
   DOMINIO.replace("https://","https://www."),
   DOMINIO.replace("https://www.","https://"),
+  // Permite acesso direto ao Render (para testes)
   "https://rio-tijucas.onrender.com"
 ];
 
@@ -30,12 +32,16 @@ app.use('/api', cors({
 app.get("/widget", (req, res) => {
   const referer = req.headers.referer || "";
   const origem  = req.headers.origin  || "";
+
   const autorizado = DOMINIOS_PERMITIDOS.some(d =>
     referer.startsWith(d) || origem.startsWith(d)
   );
+
+  // Permite acesso direto (sem referer) para o Render servir normalmente
   if (!referer && !origem) {
     return res.sendFile(path.join(__dirname, "widget.html"));
   }
+
   if (!autorizado) {
     return res.status(403).send(`
       <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666">
@@ -43,13 +49,16 @@ app.get("/widget", (req, res) => {
       </body></html>
     `);
   }
+
   res.sendFile(path.join(__dirname, "widget.html"));
 });
 
 app.use(express.static(__dirname));
 
-// Sempre busca token novo — a ANA expira tokens imprevisívelmente
+let tokenCache = { token: null, expiraEm: 0 };
+
 async function getToken() {
+  if (tokenCache.token && Date.now() < tokenCache.expiraEm) return tokenCache.token;
   const fetch = (await import("node-fetch")).default;
   const res = await fetch(`${ANA_BASE}/OAUth/v1`, {
     headers: { Identificador: ANA_ID, Senha: ANA_PASS }
@@ -58,7 +67,8 @@ async function getToken() {
   const json  = await res.json();
   const token = json?.items?.tokenautenticacao;
   if (!token) throw new Error("Token não retornado");
-  console.log("✅ Token obtido:", new Date().toLocaleTimeString("pt-BR"));
+  tokenCache = { token, expiraEm: Date.now() + 55 * 60 * 1000 };
+  console.log("✅ Token renovado:", new Date().toLocaleTimeString("pt-BR"));
   return token;
 }
 
@@ -67,14 +77,16 @@ app.get("/api/dados/:codigo", async (req, res) => {
   try {
     const token = await getToken();
     const fetch = (await import("node-fetch")).default;
+
     const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
       `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
       `&Tipo%20Filtro%20Data=DATA_LEITURA` +
       `&Range%20Intervalo%20de%20busca=DIAS_2`;
-    console.log("Chamando ANA:", new Date().toLocaleTimeString("pt-BR"));
+
+    console.log("Chamando ANA:", url);
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const txt = await r.text();
-    console.log("Resposta ANA status:", r.status);
+    console.log("Resposta ANA status:", r.status, txt.slice(0, 300));
     if (!r.ok) return res.status(r.status).send(txt);
     res.json(JSON.parse(txt));
   } catch (err) {
