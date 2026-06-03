@@ -44,10 +44,8 @@ app.get("/widget", (req, res) => {
 
 app.use(express.static(__dirname));
 
-let tokenCache = { token: null, expiraEm: 0 };
-
+// Sempre busca token novo — a ANA expira tokens imprevisívelmente
 async function getToken() {
-  if (tokenCache.token && Date.now() < tokenCache.expiraEm) return tokenCache.token;
   const fetch = (await import("node-fetch")).default;
   const res = await fetch(`${ANA_BASE}/OAUth/v1`, {
     headers: { Identificador: ANA_ID, Senha: ANA_PASS }
@@ -56,9 +54,7 @@ async function getToken() {
   const json  = await res.json();
   const token = json?.items?.tokenautenticacao;
   if (!token) throw new Error("Token não retornado");
-  // Cache de 30 minutos (mais seguro que 55)
-  tokenCache = { token, expiraEm: Date.now() + 30 * 60 * 1000 };
-  console.log("✅ Token renovado:", new Date().toLocaleTimeString("pt-BR"));
+  console.log("✅ Token obtido:", new Date().toLocaleTimeString("pt-BR"));
   return token;
 }
 
@@ -73,18 +69,11 @@ app.get("/api/dados/:codigo", async (req, res) => {
       `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
       `&Tipo%20Filtro%20Data=DATA_LEITURA` +
       `&Range%20Intervalo%20de%20busca=DIAS_2`;
-    console.log("Chamando ANA:", url);
+    console.log("Chamando ANA:", new Date().toLocaleTimeString("pt-BR"));
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const txt = await r.text();
-    console.log("Resposta ANA status:", r.status, txt.slice(0, 300));
-    if (!r.ok) {
-      // Se 401, limpa o cache para forçar renovação do token na próxima chamada
-      if (r.status === 401) {
-        tokenCache = { token: null, expiraEm: 0 };
-        console.warn("⚠️ Token inválido (401), cache limpo — token será renovado na próxima chamada");
-      }
-      return res.status(r.status).send(txt);
-    }
+    console.log("Resposta ANA status:", r.status);
+    if (!r.ok) return res.status(r.status).send(txt);
     res.json(JSON.parse(txt));
   } catch (err) {
     console.error("Erro:", err.message);
@@ -97,11 +86,11 @@ setInterval(async () => {
   try {
     const fetch = (await import("node-fetch")).default;
     await fetch(`http://localhost:${PORT}/api/dados/84095500`);
-    console.log("💓 Keep-alive + dados atualizados:", new Date().toLocaleTimeString("pt-BR"));
+    console.log("💓 Keep-alive:", new Date().toLocaleTimeString("pt-BR"));
   } catch(e) {
     console.warn("⚠️ Keep-alive erro:", e.message);
   }
-}, 14 * 60 * 1000); // a cada 14 minutos (ANA atualiza a cada 15)
+}, 14 * 60 * 1000); // a cada 14 minutos
 
 app.listen(PORT, () => {
   console.log(`\n🌊 Widget Rio Tijucas na porta ${PORT}`);
