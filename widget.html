@@ -19,7 +19,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   display:flex;flex-direction:column;
   box-shadow:0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6);
   transition:background 1.2s ease;
-  background:linear-gradient(145deg,#d8eaf5 0%,#b8d4ee 40%,#98bfe8 100%);
+  background:linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%);
 }
 .rt-scene.rising {background:linear-gradient(145deg,#f5e8d8 0%,#f0d4b0 40%,#e8c090 100%)}
 .rt-scene.falling{background:linear-gradient(145deg,#d8eaf5 0%,#b8d4ee 40%,#98bfe8 100%)}
@@ -60,20 +60,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 .rt-tick.min{width:6px}
 
 .rt-water-scene{position:absolute;left:26px;right:0;top:8px;height:96px;overflow:hidden;border-radius:0 10px 10px 0}
-
-/* LOGO dentro da área de água */
-.rt-water-logo{
-  position:absolute;
-  left:50%;top:50%;
-  transform:translate(-50%,-50%);
-  width:110px;height:110px;
-  object-fit:contain;
-  opacity:0.30;
-  pointer-events:none;
-  z-index:2;
-  filter:brightness(0) invert(1);
-}
-
+.rt-water-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:110px;height:110px;object-fit:contain;opacity:0.30;pointer-events:none;z-index:2;filter:brightness(0) invert(1)}
 .rt-water-body{position:absolute;bottom:0;left:0;right:0;transition:height 1.6s cubic-bezier(.4,0,.2,1)}
 .rt-wave1{position:absolute;top:-14px;left:0;width:200%;animation:rtwv1 2.8s linear infinite}
 .rt-wave2{position:absolute;top:-8px;left:0;width:200%;animation:rtwv2 3.9s linear infinite;opacity:.5}
@@ -83,8 +70,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 
 .rt-arrow-wrap{position:absolute;right:8px;top:8px;z-index:4}
 .rt-arrow{transition:transform .7s cubic-bezier(.4,0,.2,1)}
-.rt-arrow.up{transform:rotate(180deg)}
-.rt-arrow.down{transform:rotate(0deg)}
 
 .rt-time{text-align:center}
 .rt-time-lbl{font-size:9px;color:rgba(30,50,80,.55);letter-spacing:.5px;text-transform:uppercase}
@@ -95,6 +80,8 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 .rt-footer-src{font-size:10px;color:rgba(30,50,80,.45)}
 .rt-dev{font-size:9px;color:rgba(30,50,80,.35);font-weight:500;letter-spacing:.3px;text-transform:uppercase}
 </style>
+</head>
+<body>
 
 <div class="rt-scene stable" id="rtScene">
   <div class="rt-rain" id="rtRain"></div>
@@ -115,7 +102,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   <div class="rt-body">
     <div class="rt-left">
       <div class="rt-num" id="rtNum">—</div>
-      <div class="rt-unit">metros</div>
+      <div class="rt-unit" id="rtUnit">metros (cota)</div>
       <div class="rt-pill" id="rtPill"><span id="rtIcon"></span><span id="rtLabel">Carregando...</span></div>
     </div>
 
@@ -125,7 +112,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
       <div class="rt-gauge">
         <div class="rt-ruler" id="rtRuler"></div>
         <div class="rt-water-scene">
-          <!-- Logo dentro da área de água -->
           <img class="rt-water-logo" src="https://www.sjbmilgrau.com.br/wp-content/uploads/2026/05/IMG_7587.png" alt="">
           <div class="rt-water-body" id="rtWaterBody" style="height:20px">
             <svg class="rt-wave1" viewBox="0 0 800 20" preserveAspectRatio="none" height="20">
@@ -138,13 +124,13 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
           </div>
         </div>
         <div class="rt-arrow-wrap" id="rtArrowWrap" style="display:none">
-          <svg class="rt-arrow up" id="rtArrow" width="32" height="32" viewBox="0 0 38 38">
+          <svg class="rt-arrow" id="rtArrow" width="32" height="32" viewBox="0 0 38 38">
             <defs>
               <linearGradient id="rtGfall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#378ADD"/><stop offset="100%" stop-color="#0C447C"/></linearGradient>
               <linearGradient id="rtGrise" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#EF9F27"/><stop offset="100%" stop-color="#993C1D"/></linearGradient>
             </defs>
-            <circle cx="19" cy="19" r="18" id="rtArrowCircle" fill="url(#rtGrise)" opacity=".93"/>
-            <path d="M19 11L19 27M12 20L19 27L26 20" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="19" cy="19" r="18" id="rtArrowCircle" fill="url(#rtGfall)" opacity=".93"/>
+            <path d="M19 11L19 27M12 18L19 11L26 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" id="rtArrowPath"/>
           </svg>
         </div>
       </div>
@@ -167,102 +153,153 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   var API_BASE  = 'https://rio-tijucas.onrender.com';
   var ESTACAO   = '84095500';
   var INTERVALO = 5 * 60 * 1000;
-  var MAX=8, WATER_H=96;
-  var rainOn=false;
+  var WATER_H   = 96;
+  var rainOn    = false;
 
   function buildRuler(){
-    var r=document.getElementById('rtRuler');r.innerHTML='';
-    for(var i=0;i<13;i++){var d=document.createElement('div');d.className='rt-tick '+(i%3===0?'maj':'min');r.appendChild(d);}
-  }
-  function pad(n){return String(n).padStart(2,'0');}
-  function fmtNum(n){return n.toFixed(2).replace('.',',');}
-  function fmtTime(d){return pad(d.getHours())+'h'+pad(d.getMinutes())+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2);}
-  function proxAtualizacao(){
-    var now=new Date();
-    var min=now.getMinutes();
-    var proxMin=[0,15,30,45,60].find(function(m){return m>min;});
-    var prox=new Date(now);
-    if(proxMin===60){prox.setHours(prox.getHours()+1);prox.setMinutes(0);}
-    else{prox.setMinutes(proxMin);}
-    prox.setSeconds(0);
-    var diff=Math.round((prox-now)/60000);
-    return 'Próxima: '+pad(prox.getHours())+'h'+pad(prox.getMinutes())+' (em '+diff+'min)';
-  }
-
-  function render(lv,md,dataLeitura){
-    var scene=document.getElementById('rtScene');
-    scene.className='rt-scene '+md;
-    document.getElementById('rtNum').textContent=lv!==null?fmtNum(lv):'—';
-    var pct=lv!==null?Math.min(Math.max(lv/MAX,0.04),0.97):0.1;
-    document.getElementById('rtWaterBody').style.height=Math.round(pct*WATER_H)+'px';
-
-    var texts={rising:'Rio subindo',falling:'Rio baixando',stable:'Nível estável'};
-    var icons={rising:'↑ ',falling:'↓ ',stable:''};
-    document.getElementById('rtIcon').textContent=icons[md]||'';
-    document.getElementById('rtLabel').textContent=texts[md]||'Aguardando dados';
-
-    var rising=(md==='rising');
-    document.getElementById('rtW1').setAttribute('fill',rising?'rgba(210,110,40,.7)':'rgba(55,138,221,.75)');
-    document.getElementById('rtW2').setAttribute('fill',rising?'rgba(210,110,40,.38)':'rgba(55,138,221,.4)');
-    document.getElementById('rtFill').style.background=rising?'rgba(210,110,40,.5)':'rgba(55,138,221,.55)';
-
-    var arrowWrap=document.getElementById('rtArrowWrap');
-    var arrow=document.getElementById('rtArrow');
-    var circle=document.getElementById('rtArrowCircle');
-    if(md==='stable'){
-      arrowWrap.style.display='none';
-    } else {
-      arrowWrap.style.display='block';
-      arrow.className='rt-arrow '+(md==='rising'?'up':'down');
-      circle.setAttribute('fill',md==='rising'?'url(#rtGrise)':'url(#rtGfall)');
+    var r = document.getElementById('rtRuler');
+    r.innerHTML = '';
+    for(var i = 0; i < 13; i++){
+      var d = document.createElement('div');
+      d.className = 'rt-tick ' + (i % 3 === 0 ? 'maj' : 'min');
+      r.appendChild(d);
     }
-    document.getElementById('rtTime').textContent=fmtTime(dataLeitura||new Date());
-    document.getElementById('rtNext').textContent=proxAtualizacao();
+  }
+
+  function pad(n){ return String(n).padStart(2, '0'); }
+
+  function fmtCota(cm){
+    var m = cm / 100;
+    var abs = Math.abs(m).toFixed(2).replace('.', ',');
+    return (m < 0 ? '-' : (m > 0 ? '+' : '')) + abs;
+  }
+
+  function fmtTime(d){
+    return pad(d.getHours()) + 'h' + pad(d.getMinutes()) + ' ' +
+           pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2);
+  }
+
+  function proxAtualizacao(){
+    var now = new Date();
+    var min = now.getMinutes();
+    var proxMin = [0, 15, 30, 45, 60].find(function(m){ return m > min; });
+    var prox = new Date(now);
+    if(proxMin === 60){ prox.setHours(prox.getHours() + 1); prox.setMinutes(0); }
+    else { prox.setMinutes(proxMin); }
+    prox.setSeconds(0);
+    var diff = Math.round((prox - now) / 60000);
+    return 'Próxima: ' + pad(prox.getHours()) + 'h' + pad(prox.getMinutes()) + ' (em ' + diff + 'min)';
+  }
+
+  function render(cotaCm, md, dataLeitura){
+    var scene = document.getElementById('rtScene');
+    scene.className = 'rt-scene ' + md;
+
+    document.getElementById('rtNum').textContent = cotaCm !== null ? fmtCota(cotaCm) : '—';
+    document.getElementById('rtUnit').textContent = 'metros (cota)';
+
+    var MIN_CM = -50, MAX_CM = 800;
+    var pct = cotaCm !== null
+      ? Math.min(Math.max((cotaCm - MIN_CM) / (MAX_CM - MIN_CM), 0.04), 0.97)
+      : 0.1;
+    document.getElementById('rtWaterBody').style.height = Math.round(pct * WATER_H) + 'px';
+
+    var texts = { rising: 'Rio subindo', falling: 'Rio baixando', stable: 'Nível estável' };
+    var icons  = { rising: '↑ ', falling: '↓ ', stable: '' };
+    document.getElementById('rtIcon').textContent  = icons[md]  || '';
+    document.getElementById('rtLabel').textContent = texts[md] || 'Aguardando dados';
+
+    var rising = (md === 'rising');
+    document.getElementById('rtW1').setAttribute('fill', rising ? 'rgba(210,110,40,.7)'   : 'rgba(55,138,221,.75)');
+    document.getElementById('rtW2').setAttribute('fill', rising ? 'rgba(210,110,40,.38)'  : 'rgba(55,138,221,.4)');
+    document.getElementById('rtFill').style.background = rising ? 'rgba(210,110,40,.5)'   : 'rgba(55,138,221,.55)';
+
+    var arrowWrap = document.getElementById('rtArrowWrap');
+    var circle    = document.getElementById('rtArrowCircle');
+    var arrowPath = document.getElementById('rtArrowPath');
+
+    if(md === 'stable'){
+      arrowWrap.style.display = 'none';
+    } else {
+      arrowWrap.style.display = 'block';
+      if(md === 'rising'){
+        circle.setAttribute('fill', 'url(#rtGrise)');
+        arrowPath.setAttribute('d', 'M19 27L19 11M12 20L19 11L26 20');
+      } else {
+        circle.setAttribute('fill', 'url(#rtGfall)');
+        arrowPath.setAttribute('d', 'M19 11L19 27M12 18L19 27L26 18');
+      }
+    }
+
+    document.getElementById('rtTime').textContent = fmtTime(dataLeitura || new Date());
+    document.getElementById('rtNext').textContent = proxAtualizacao();
   }
 
   function buildDrops(){
-    var l=document.getElementById('rtRain');l.innerHTML='';
-    for(var i=0;i<60;i++){
-      var d=document.createElement('div');d.className='rt-drop';
-      var h=8+Math.random()*16;
-      d.style.cssText='left:'+Math.random()*100+'%;top:'+-Math.random()*100+'px;height:'+h+'px;background:rgba(100,165,230,'+(0.3+Math.random()*0.3)+');animation-duration:'+(0.5+Math.random()*0.55)+'s;animation-delay:'+-Math.random()*1.5+'s;';
+    var l = document.getElementById('rtRain');
+    l.innerHTML = '';
+    for(var i = 0; i < 60; i++){
+      var d = document.createElement('div');
+      d.className = 'rt-drop';
+      var h = 8 + Math.random() * 16;
+      d.style.cssText = 'left:' + Math.random()*100 + '%;top:-' + Math.random()*100 +
+        'px;height:' + h + 'px;background:rgba(100,165,230,' + (0.3+Math.random()*0.3) +
+        ');animation-duration:' + (0.5+Math.random()*0.55) + 's;animation-delay:-' + Math.random()*1.5 + 's;';
       l.appendChild(d);
     }
   }
 
   function setRain(on){
-    if(on===rainOn)return;
-    rainOn=on;
-    if(on)buildDrops();
-    document.getElementById('rtRain').classList.toggle('on',on);
+    if(on === rainOn) return;
+    rainOn = on;
+    if(on) buildDrops();
+    document.getElementById('rtRain').classList.toggle('on', on);
   }
 
   async function fetchDados(){
-    try{
-      var r=await fetch(API_BASE+'/api/dados/'+ESTACAO);
-      if(!r.ok)return;
-      var json=await r.json();
-      var items=json.items;
-      if(!items||!items.length)return;
-      items.sort(function(a,b){return new Date(a.Data_Hora_Medicao)-new Date(b.Data_Hora_Medicao);});
-      var last=items[items.length-1];
-      var prev=items.length>1?items[items.length-2]:null;
-      var cota=parseFloat(last.Cota_Adotada);
-      var lv=Math.abs(cota)/100;
-      var cotaAtual=parseFloat(last.Cota_Adotada);
-      var cotaAnterior=prev?parseFloat(prev.Cota_Adotada):cotaAtual;
-      var pv=Math.abs(cotaAnterior)/100;
-      var chuva=parseFloat(last.Chuva_Adotada||0);
-      var md=cotaAtual>cotaAnterior+0.5?'rising':cotaAtual<cotaAnterior-0.5?'falling':'stable';
-      var dataLeitura=last.Data_Hora_Medicao?new Date(last.Data_Hora_Medicao.replace(' ','T')):new Date();
-      render(lv,md,dataLeitura);
-      setRain(chuva>0.5);
-    }catch(e){console.warn('Rio Tijucas:',e);}
+    try {
+      var r = await fetch(API_BASE + '/api/dados/' + ESTACAO);
+      if(!r.ok) return;
+      var json = await r.json();
+      var items = json.items;
+      if(!items || !items.length) return;
+
+      items.sort(function(a, b){
+        return new Date(a.Data_Hora_Medicao.replace(' ','T')) -
+               new Date(b.Data_Hora_Medicao.replace(' ','T'));
+      });
+
+      var last = items[items.length - 1];
+      var cotaAtual = parseFloat(last.Cota_Adotada);
+
+      // Busca a primeira leitura anterior com valor diferente
+      var prev = null;
+      for(var i = items.length - 2; i >= 0; i--){
+        if(parseFloat(items[i].Cota_Adotada) !== cotaAtual){
+          prev = items[i];
+          break;
+        }
+      }
+      var cotaAnterior = prev ? parseFloat(prev.Cota_Adotada) : cotaAtual;
+
+      var diff = cotaAtual - cotaAnterior;
+      var md   = diff > 0.5 ? 'rising' : diff < -0.5 ? 'falling' : 'stable';
+
+      var dataLeitura = new Date(last.Data_Hora_Medicao.replace(' ','T'));
+      var chuva = parseFloat(last.Chuva_Adotada || 0);
+
+      render(cotaAtual, md, dataLeitura);
+      setRain(chuva > 0.5);
+
+    } catch(e){ console.warn('Rio Tijucas:', e); }
   }
 
   buildRuler();
-  render(null,'stable');
+  render(null, 'stable');
   fetchDados();
-  setInterval(fetchDados,INTERVALO);
+  setInterval(fetchDados, INTERVALO);
 })();
 </script>
+
+</body>
+</html>
