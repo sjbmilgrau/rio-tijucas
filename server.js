@@ -14,6 +14,7 @@ const DOMINIOS_PERMITIDOS = [
   DOMINIO.replace("https://www.","https://"),
   "https://rio-tijucas.onrender.com"
 ];
+
 app.use('/api', cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -21,6 +22,7 @@ app.use('/api', cors({
     callback(new Error("Domínio não autorizado: " + origin));
   }
 }));
+
 app.get("/widget", (req, res) => {
   const referer = req.headers.referer || "";
   const origem  = req.headers.origin  || "";
@@ -39,8 +41,11 @@ app.get("/widget", (req, res) => {
   }
   res.sendFile(path.join(__dirname, "widget.html"));
 });
+
 app.use(express.static(__dirname));
+
 let tokenCache = { token: null, expiraEm: 0 };
+
 async function getToken() {
   if (tokenCache.token && Date.now() < tokenCache.expiraEm) return tokenCache.token;
   const fetch = (await import("node-fetch")).default;
@@ -51,11 +56,14 @@ async function getToken() {
   const json  = await res.json();
   const token = json?.items?.tokenautenticacao;
   if (!token) throw new Error("Token não retornado");
-  tokenCache = { token, expiraEm: Date.now() + 55 * 60 * 1000 };
+  // Cache de 30 minutos (mais seguro que 55)
+  tokenCache = { token, expiraEm: Date.now() + 30 * 60 * 1000 };
   console.log("✅ Token renovado:", new Date().toLocaleTimeString("pt-BR"));
   return token;
 }
+
 app.get("/api/estacoes", (_req, res) => res.json({ ok: true }));
+
 app.get("/api/dados/:codigo", async (req, res) => {
   const { codigo } = req.params;
   try {
@@ -69,7 +77,14 @@ app.get("/api/dados/:codigo", async (req, res) => {
     const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
     const txt = await r.text();
     console.log("Resposta ANA status:", r.status, txt.slice(0, 300));
-    if (!r.ok) return res.status(r.status).send(txt);
+    if (!r.ok) {
+      // Se 401, limpa o cache para forçar renovação do token na próxima chamada
+      if (r.status === 401) {
+        tokenCache = { token: null, expiraEm: 0 };
+        console.warn("⚠️ Token inválido (401), cache limpo — token será renovado na próxima chamada");
+      }
+      return res.status(r.status).send(txt);
+    }
     res.json(JSON.parse(txt));
   } catch (err) {
     console.error("Erro:", err.message);
