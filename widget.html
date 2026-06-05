@@ -179,16 +179,14 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
            pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + String(d.getFullYear()).slice(2);
   }
 
-  function proxAtualizacao(){
-    var now = new Date();
-    var min = now.getMinutes();
-    var proxMin = [0, 15, 30, 45, 60].find(function(m){ return m > min; });
-    var prox = new Date(now);
-    if(proxMin === 60){ prox.setHours(prox.getHours() + 1); prox.setMinutes(0); }
-    else { prox.setMinutes(proxMin); }
+  function proxAtualizacao(dataLeitura){
+    // Baseado na última leitura: próxima hora cheia + 7 minutos
+    var prox = new Date(dataLeitura);
+    prox.setMinutes(0);
     prox.setSeconds(0);
-    var diff = Math.round((prox - now) / 60000);
-    return 'Próxima: ' + pad(prox.getHours()) + 'h' + pad(prox.getMinutes()) + ' (em ' + diff + 'min)';
+    prox.setHours(prox.getHours() + 1); // próxima hora cheia
+    prox.setMinutes(7);                  // + 7 minutos
+    return 'Próxima: ' + pad(prox.getHours()) + 'h' + pad(prox.getMinutes());
   }
 
   function render(cotaCm, md, dataLeitura){
@@ -232,7 +230,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
     }
 
     document.getElementById('rtTime').textContent = fmtTime(dataLeitura || new Date());
-    document.getElementById('rtNext').textContent = proxAtualizacao();
+    document.getElementById('rtNext').textContent = proxAtualizacao(dataLeitura || new Date());
   }
 
   function buildDrops(){
@@ -272,7 +270,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
       var last = items[items.length - 1];
       var cotaAtual = parseFloat(last.Cota_Adotada);
 
-      // Busca a primeira leitura anterior com valor diferente
       var prev = null;
       for(var i = items.length - 2; i >= 0; i--){
         if(parseFloat(items[i].Cota_Adotada) !== cotaAtual){
