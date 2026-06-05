@@ -180,12 +180,17 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   }
 
   function proxAtualizacao(dataLeitura){
-    // Baseado na última leitura: próxima hora cheia + 7 minutos
-    var prox = new Date(dataLeitura);
-    prox.setMinutes(0);
+    var now = new Date();
+    var prox = new Date(now);
     prox.setSeconds(0);
-    prox.setHours(prox.getHours() + 1); // próxima hora cheia
-    prox.setMinutes(7);                  // + 7 minutos
+    // Se ainda não passou dos 7 minutos da hora atual, a próxima é esta hora + 07min
+    // Se já passou dos 7 minutos, a próxima é a hora seguinte + 07min
+    if(now.getMinutes() < 7){
+      prox.setMinutes(7);
+    } else {
+      prox.setHours(prox.getHours() + 1);
+      prox.setMinutes(7);
+    }
     return 'Próxima: ' + pad(prox.getHours()) + 'h' + pad(prox.getMinutes());
   }
 
