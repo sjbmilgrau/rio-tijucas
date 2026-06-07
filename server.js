@@ -9,7 +9,6 @@ const DOMINIO  = process.env.SITE_DOMINIO || "https://www.sjbmilgrau.com.br";
 const PORT     = process.env.PORT || 3000;
 const ANA_BASE = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas";
 
-// Domínios permitidos (com e sem www)
 const DOMINIOS_PERMITIDOS = [
   DOMINIO,
   DOMINIO.replace("https://","https://www."),
@@ -17,7 +16,6 @@ const DOMINIOS_PERMITIDOS = [
   "https://rio-tijucas.onrender.com"
 ];
 
-// CORS para a API
 app.use('/api', cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -26,7 +24,6 @@ app.use('/api', cors({
   }
 }));
 
-// Proteção do widget.html — só carrega dentro do seu site
 app.get("/widget", (req, res) => {
   const referer = req.headers.referer || "";
   const origem  = req.headers.origin  || "";
@@ -48,6 +45,30 @@ app.get("/widget", (req, res) => {
 
 app.use(express.static(__dirname));
 
+// ── Cache de dados no servidor ──
+// Válido da xx:07 até xx+1h:06 — todos os visitantes recebem o mesmo resultado
+let dadosCache = { dados: null, horaCheia: -1 };
+
+function horaCheiaCacheAtual() {
+  const now = new Date();
+  // Se ainda não passou dos 7 minutos, o cache válido é da hora anterior
+  if (now.getMinutes() < 7) {
+    const anterior = new Date(now);
+    anterior.setHours(anterior.getHours() - 1);
+    anterior.setMinutes(0); anterior.setSeconds(0); anterior.setMilliseconds(0);
+    return anterior.getTime();
+  }
+  const hora = new Date(now);
+  hora.setMinutes(0); hora.setSeconds(0); hora.setMilliseconds(0);
+  return hora.getTime();
+}
+
+function cacheValido() {
+  return dadosCache.dados !== null &&
+         dadosCache.horaCheia === horaCheiaCacheAtual();
+}
+
+// ── Token ──
 let tokenCache = { token: null, expiraEm: 0 };
 
 async function getToken() {
@@ -60,36 +81,58 @@ async function getToken() {
   const json  = await res.json();
   const token = json?.items?.tokenautenticacao;
   if (!token) throw new Error("Token não retornado");
-  // Cache de 20 minutos — mais seguro para evitar 401
   tokenCache = { token, expiraEm: Date.now() + 20 * 60 * 1000 };
   console.log("✅ Token renovado:", new Date().toLocaleTimeString("pt-BR"));
   return token;
 }
 
+// ── Busca dados da ANA ──
+async function buscarDadosANA(codigo) {
+  const token = await getToken();
+  const fetch = (await import("node-fetch")).default;
+  const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
+    `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
+    `&Tipo%20Filtro%20Data=DATA_LEITURA` +
+    `&Range%20Intervalo%20de%20busca=DIAS_2`;
+  console.log("Chamando ANA:", new Date().toLocaleTimeString("pt-BR"));
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const txt = await r.text();
+  console.log("Resposta ANA status:", r.status);
+  if (!r.ok) {
+    if (r.status === 401) {
+      tokenCache = { token: null, expiraEm: 0 };
+      console.warn("⚠️ Token expirado (401), cache limpo");
+    }
+    throw new Error(`ANA status ${r.status}`);
+  }
+  return JSON.parse(txt);
+}
+
+// ── Rota principal ──
 app.get("/api/dados/:codigo", async (req, res) => {
   const { codigo } = req.params;
   try {
-    const token = await getToken();
-    const fetch = (await import("node-fetch")).default;
-    const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
-      `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
-      `&Tipo%20Filtro%20Data=DATA_LEITURA` +
-      `&Range%20Intervalo%20de%20busca=DIAS_2`;
-    console.log("Chamando ANA:", new Date().toLocaleTimeString("pt-BR"));
-    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    const txt = await r.text();
-    console.log("Resposta ANA status:", r.status);
-    if (!r.ok) {
-      // Se 401, limpa cache imediatamente para renovar token na próxima chamada
-      if (r.status === 401) {
-        tokenCache = { token: null, expiraEm: 0 };
-        console.warn("⚠️ Token expirado (401), cache limpo — renovando na próxima chamada");
-      }
-      return res.status(r.status).send(txt);
+    // Se cache válido, retorna imediatamente sem chamar a ANA
+    if (cacheValido()) {
+      console.log("📦 Servindo do cache:", new Date().toLocaleTimeString("pt-BR"));
+      return res.json(dadosCache.dados);
     }
-    res.json(JSON.parse(txt));
+
+    // Cache expirado — busca dados novos
+    const json = await buscarDadosANA(codigo);
+
+    // Salva no cache com a hora cheia atual
+    dadosCache = { dados: json, horaCheia: horaCheiaCacheAtual() };
+    console.log("💾 Cache atualizado:", new Date().toLocaleTimeString("pt-BR"));
+
+    res.json(json);
   } catch (err) {
     console.error("Erro:", err.message);
+    // Se tiver cache antigo, serve ele em caso de erro
+    if (dadosCache.dados) {
+      console.warn("⚠️ Erro na ANA, servindo cache antigo");
+      return res.json(dadosCache.dados);
+    }
     res.status(500).json({ erro: err.message });
   }
 });
