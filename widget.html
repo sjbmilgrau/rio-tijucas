@@ -18,12 +18,8 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   padding:18px 24px 14px;
   display:flex;flex-direction:column;
   box-shadow:0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6);
-  transition:background 1.2s ease;
-  background:linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%);
+  transition:background 1.4s ease, box-shadow 1.4s ease;
 }
-.rt-scene.rising {background:linear-gradient(145deg,#f5e8d8 0%,#f0d4b0 40%,#e8c090 100%)}
-.rt-scene.falling{background:linear-gradient(145deg,#d8eaf5 0%,#b8d4ee 40%,#98bfe8 100%)}
-.rt-scene.stable {background:linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%)}
 
 .rt-rain{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.2s}
 .rt-rain.on{opacity:1}
@@ -40,14 +36,9 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 
 .rt-body{display:flex;align-items:center;flex:1;position:relative;z-index:2}
 .rt-left{flex:1;display:flex;flex-direction:column}
-.rt-num{font-size:62px;font-weight:900;letter-spacing:-3px;line-height:1;color:#1a2e44;transition:color .6s;font-variant-numeric:tabular-nums}
+.rt-num{font-size:62px;font-weight:900;letter-spacing:-3px;line-height:1;color:#1a2e44;transition:color 1.4s;font-variant-numeric:tabular-nums}
 .rt-unit{font-size:15px;font-weight:400;color:rgba(30,50,80,.55);margin-top:4px}
-.rt-pill{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.5);backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:500;color:#2a4a6a;margin-top:10px;width:fit-content;transition:all .6s}
-
-.rt-scene.rising  .rt-num{color:#7a3a0a}
-.rt-scene.rising  .rt-pill{color:#7a3a0a;background:rgba(255,220,170,.5)}
-.rt-scene.falling .rt-num{color:#0a3a6a}
-.rt-scene.falling .rt-pill{color:#0a3a6a;background:rgba(180,220,255,.5)}
+.rt-pill{display:inline-flex;align-items:center;gap:6px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:500;color:#2a4a6a;margin-top:10px;width:fit-content;transition:background 1.4s, color 1.4s}
 
 .rt-div{width:1px;background:rgba(30,60,100,.12);align-self:stretch;margin:0 20px;flex-shrink:0}
 
@@ -66,7 +57,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 .rt-wave2{position:absolute;top:-8px;left:0;width:200%;animation:rtwv2 3.9s linear infinite;opacity:.5}
 @keyframes rtwv1{from{transform:translateX(0)}to{transform:translateX(-50%)}}
 @keyframes rtwv2{from{transform:translateX(-50%)}to{transform:translateX(0)}}
-#rtFill{position:absolute;top:16px;bottom:0;left:0;right:0;transition:background .6s}
+#rtFill{position:absolute;top:16px;bottom:0;left:0;right:0;transition:background 1.4s}
 
 .rt-arrow-wrap{position:absolute;right:8px;top:8px;z-index:4}
 .rt-arrow{transition:transform .7s cubic-bezier(.4,0,.2,1)}
@@ -83,7 +74,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 </head>
 <body>
 
-<div class="rt-scene stable" id="rtScene">
+<div class="rt-scene" id="rtScene">
   <div class="rt-rain" id="rtRain"></div>
 
   <div class="rt-header">
@@ -126,8 +117,38 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
         <div class="rt-arrow-wrap" id="rtArrowWrap" style="display:none">
           <svg class="rt-arrow" id="rtArrow" width="32" height="32" viewBox="0 0 38 38">
             <defs>
-              <linearGradient id="rtGfall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#378ADD"/><stop offset="100%" stop-color="#0C447C"/></linearGradient>
-              <linearGradient id="rtGrise" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#EF9F27"/><stop offset="100%" stop-color="#993C1D"/></linearGradient>
+              <linearGradient id="rtGfall" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#378ADD"/>
+                <stop offset="100%" stop-color="#0C447C"/>
+              </linearGradient>
+              <linearGradient id="rtGrise0" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#5baae8"/>
+                <stop offset="100%" stop-color="#1860a8"/>
+              </linearGradient>
+              <linearGradient id="rtGrise1" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#3880c8"/>
+                <stop offset="100%" stop-color="#073878"/>
+              </linearGradient>
+              <linearGradient id="rtGrise2" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#1a60a8"/>
+                <stop offset="100%" stop-color="#042c58"/>
+              </linearGradient>
+              <linearGradient id="rtGrise3" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#f0b050"/>
+                <stop offset="100%" stop-color="#a06010"/>
+              </linearGradient>
+              <linearGradient id="rtGrise4" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#f09030"/>
+                <stop offset="100%" stop-color="#904010"/>
+              </linearGradient>
+              <linearGradient id="rtGrise5" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#e86020"/>
+                <stop offset="100%" stop-color="#802010"/>
+              </linearGradient>
+              <linearGradient id="rtGrise6" x1="0" y1="1" x2="0" y2="0">
+                <stop offset="0%" stop-color="#e04040"/>
+                <stop offset="100%" stop-color="#801010"/>
+              </linearGradient>
             </defs>
             <circle cx="19" cy="19" r="18" id="rtArrowCircle" fill="url(#rtGfall)" opacity=".93"/>
             <path d="M19 11L19 27M12 18L19 11L26 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" id="rtArrowPath"/>
@@ -156,6 +177,93 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   var WATER_H   = 96;
   var rainOn    = false;
 
+  // Escala de cores por nível (cm)
+  // Cada entrada: limite superior, bg do card, cores da água, cor do número, cor do pill
+  var COLOR_SCALE = [
+    {
+      maxCm: 50,
+      bg:       'linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%)',
+      shadow:   '0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6)',
+      water1:   'rgba(55,138,221,.70)', water2: 'rgba(55,138,221,.38)', fill: 'rgba(55,138,221,.50)',
+      num:      '#0c447c',
+      pill:     'rgba(200,225,248,.60)', pillText: '#0c447c',
+      arrowGrad:'rtGrise0'
+    },
+    {
+      maxCm: 100,
+      bg:       'linear-gradient(145deg,#d4e4f4 0%,#b8cee8 40%,#9abede 100%)',
+      shadow:   '0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6)',
+      water1:   'rgba(42,120,205,.75)', water2: 'rgba(42,120,205,.40)', fill: 'rgba(42,120,205,.55)',
+      num:      '#0a3a6a',
+      pill:     'rgba(185,218,245,.65)', pillText: '#0a3a6a',
+      arrowGrad:'rtGrise0'
+    },
+    {
+      maxCm: 200,
+      bg:       'linear-gradient(145deg,#c4d8f0 0%,#a4bfe4 40%,#84a8d8 100%)',
+      shadow:   '0 8px 40px rgba(20,55,115,0.15),inset 0 1px 0 rgba(255,255,255,0.55)',
+      water1:   'rgba(28,100,185,.78)', water2: 'rgba(28,100,185,.42)', fill: 'rgba(28,100,185,.60)',
+      num:      '#07305e',
+      pill:     'rgba(168,208,240,.65)', pillText: '#07305e',
+      arrowGrad:'rtGrise1'
+    },
+    {
+      maxCm: 300,
+      bg:       'linear-gradient(145deg,#b0c8e4 0%,#8aaece 40%,#6898bc 100%)',
+      shadow:   '0 8px 40px rgba(16,50,110,0.18),inset 0 1px 0 rgba(255,255,255,0.5)',
+      water1:   'rgba(16,80,160,.82)', water2: 'rgba(16,80,160,.45)', fill: 'rgba(16,80,160,.65)',
+      num:      '#042c53',
+      pill:     'rgba(148,195,232,.65)', pillText: '#042c53',
+      arrowGrad:'rtGrise2'
+    },
+    {
+      maxCm: 400,
+      bg:       'linear-gradient(145deg,#f5e8d0 0%,#ecd4a0 40%,#e0bc72 100%)',
+      shadow:   '0 8px 40px rgba(160,90,10,0.18),inset 0 1px 0 rgba(255,255,255,0.5)',
+      water1:   'rgba(185,115,20,.82)', water2: 'rgba(185,115,20,.45)', fill: 'rgba(185,115,20,.65)',
+      num:      '#633806',
+      pill:     'rgba(250,199,117,.65)', pillText: '#633806',
+      arrowGrad:'rtGrise3'
+    },
+    {
+      maxCm: 500,
+      bg:       'linear-gradient(145deg,#f5d8b0 0%,#edb870 40%,#e0963a 100%)',
+      shadow:   '0 8px 40px rgba(160,70,10,0.20),inset 0 1px 0 rgba(255,255,255,0.45)',
+      water1:   'rgba(210,110,15,.85)', water2: 'rgba(210,110,15,.48)', fill: 'rgba(210,110,15,.68)',
+      num:      '#854f0b',
+      pill:     'rgba(250,175,80,.65)', pillText: '#854f0b',
+      arrowGrad:'rtGrise4'
+    },
+    {
+      maxCm: 600,
+      bg:       'linear-gradient(145deg,#f5c8a0 0%,#ee9e58 40%,#e07430 100%)',
+      shadow:   '0 8px 40px rgba(170,55,10,0.22),inset 0 1px 0 rgba(255,255,255,0.4)',
+      water1:   'rgba(230,90,10,.88)', water2: 'rgba(230,90,10,.50)', fill: 'rgba(230,90,10,.72)',
+      num:      '#993c1d',
+      pill:     'rgba(245,148,80,.65)', pillText: '#993c1d',
+      arrowGrad:'rtGrise5'
+    },
+    {
+      maxCm: 9999,
+      bg:       'linear-gradient(145deg,#f5b8a8 0%,#ee7868 40%,#e04040 100%)',
+      shadow:   '0 8px 40px rgba(180,30,30,0.25),inset 0 1px 0 rgba(255,255,255,0.35)',
+      water1:   'rgba(220,50,50,.88)', water2: 'rgba(220,50,50,.50)', fill: 'rgba(220,50,50,.72)',
+      num:      '#791f1f',
+      pill:     'rgba(240,120,120,.65)', pillText: '#791f1f',
+      arrowGrad:'rtGrise6'
+    }
+  ];
+
+  function getColorConf(cm){
+    for(var i = 0; i < COLOR_SCALE.length; i++){
+      if(cm < COLOR_SCALE[i].maxCm) return COLOR_SCALE[i];
+    }
+    return COLOR_SCALE[COLOR_SCALE.length - 1];
+  }
+
+  // Gradiente da seta quando descendo (sempre azul padrão)
+  var ARROW_GRAD_FALLING = 'rtGfall';
+
   function buildRuler(){
     var r = document.getElementById('rtRuler');
     r.innerHTML = '';
@@ -183,8 +291,6 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
     var now = new Date();
     var prox = new Date(now);
     prox.setSeconds(0);
-    // Se ainda não passou dos 7 minutos da hora atual, a próxima é esta hora + 07min
-    // Se já passou dos 7 minutos, a próxima é a hora seguinte + 07min
     if(now.getMinutes() < 7){
       prox.setMinutes(7);
     } else {
@@ -195,28 +301,40 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   }
 
   function render(cotaCm, md, dataLeitura){
+    var conf = getColorConf(cotaCm !== null ? cotaCm : 0);
+
+    // Fundo e sombra do card
     var scene = document.getElementById('rtScene');
-    scene.className = 'rt-scene ' + md;
+    scene.style.background  = conf.bg;
+    scene.style.boxShadow   = conf.shadow;
 
+    // Número principal
     document.getElementById('rtNum').textContent = cotaCm !== null ? fmtCota(cotaCm) : '—';
-    document.getElementById('rtUnit').textContent = 'metros (cota)';
+    document.getElementById('rtNum').style.color  = conf.num;
 
+    // Altura da água
     var MIN_CM = -50, MAX_CM = 800;
     var pct = cotaCm !== null
       ? Math.min(Math.max((cotaCm - MIN_CM) / (MAX_CM - MIN_CM), 0.04), 0.97)
       : 0.1;
     document.getElementById('rtWaterBody').style.height = Math.round(pct * WATER_H) + 'px';
 
+    // Cores da água
+    document.getElementById('rtW1').setAttribute('fill', conf.water1);
+    document.getElementById('rtW2').setAttribute('fill', conf.water2);
+    document.getElementById('rtFill').style.background = conf.fill;
+
+    // Pill / status
     var texts = { rising: 'Rio subindo', falling: 'Rio baixando', stable: 'Nível estável' };
     var icons  = { rising: '↑ ', falling: '↓ ', stable: '' };
     document.getElementById('rtIcon').textContent  = icons[md]  || '';
     document.getElementById('rtLabel').textContent = texts[md] || 'Aguardando dados';
 
-    var rising = (md === 'rising');
-    document.getElementById('rtW1').setAttribute('fill', rising ? 'rgba(210,110,40,.7)'   : 'rgba(55,138,221,.75)');
-    document.getElementById('rtW2').setAttribute('fill', rising ? 'rgba(210,110,40,.38)'  : 'rgba(55,138,221,.4)');
-    document.getElementById('rtFill').style.background = rising ? 'rgba(210,110,40,.5)'   : 'rgba(55,138,221,.55)';
+    var pill = document.getElementById('rtPill');
+    pill.style.background = conf.pill;
+    pill.style.color      = conf.pillText;
 
+    // Seta direcional — aparece sempre que não está estável
     var arrowWrap = document.getElementById('rtArrowWrap');
     var circle    = document.getElementById('rtArrowCircle');
     var arrowPath = document.getElementById('rtArrowPath');
@@ -226,14 +344,18 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
     } else {
       arrowWrap.style.display = 'block';
       if(md === 'rising'){
-        circle.setAttribute('fill', 'url(#rtGrise)');
+        // Gradiente da seta acompanha a cor do nível atual
+        circle.setAttribute('fill', 'url(#' + conf.arrowGrad + ')');
+        // Seta para cima
         arrowPath.setAttribute('d', 'M19 27L19 11M12 20L19 11L26 20');
       } else {
-        circle.setAttribute('fill', 'url(#rtGfall)');
+        // Descendo: seta para baixo, gradiente azul padrão
+        circle.setAttribute('fill', 'url(#' + ARROW_GRAD_FALLING + ')');
         arrowPath.setAttribute('d', 'M19 11L19 27M12 18L19 27L26 18');
       }
     }
 
+    // Horários
     document.getElementById('rtTime').textContent = fmtTime(dataLeitura || new Date());
     document.getElementById('rtNext').textContent = proxAtualizacao(dataLeitura || new Date());
   }
@@ -297,7 +419,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   }
 
   buildRuler();
-  render(null, 'stable');
+  render(null, 'stable', new Date());
   fetchDados();
   setInterval(fetchDados, INTERVALO);
 })();
