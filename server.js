@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require("express");
 const cors    = require("cors");
 const path    = require("path");
+
 const app = express();
+
 const ANA_ID   = process.env.ANA_ID;
 const ANA_PASS = process.env.ANA_PASS;
 const DOMINIO  = process.env.SITE_DOMINIO || "https://www.sjbmilgrau.com.br";
@@ -30,9 +32,7 @@ app.get("/widget", (req, res) => {
   const autorizado = DOMINIOS_PERMITIDOS.some(d =>
     referer.startsWith(d) || origem.startsWith(d)
   );
-  if (!referer && !origem) {
-    return res.sendFile(path.join(__dirname, "widget.html"));
-  }
+  if (!referer && !origem) return res.sendFile(path.join(__dirname, "widget.html"));
   if (!autorizado) {
     return res.status(403).send(`
       <html><body style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666">
@@ -45,30 +45,24 @@ app.get("/widget", (req, res) => {
 
 app.use(express.static(__dirname));
 
-// ── Cache de dados no servidor ──
-// Válido da xx:07 até xx+1h:06 — todos os visitantes recebem o mesmo resultado
-let dadosCache = { dados: null, horaCheia: -1 };
-
-function horaCheiaCacheAtual() {
-  const now = new Date();
-  // Se ainda não passou dos 7 minutos, o cache válido é da hora anterior
-  if (now.getMinutes() < 7) {
-    const anterior = new Date(now);
-    anterior.setHours(anterior.getHours() - 1);
-    anterior.setMinutes(0); anterior.setSeconds(0); anterior.setMilliseconds(0);
-    return anterior.getTime();
-  }
-  const hora = new Date(now);
-  hora.setMinutes(0); hora.setSeconds(0); hora.setMilliseconds(0);
-  return hora.getTime();
-}
+// ── Cache ──────────────────────────────────────────────
+let dadosCache = { dados: null, expiraEm: 0 };
 
 function cacheValido() {
-  return dadosCache.dados !== null &&
-         dadosCache.horaCheia === horaCheiaCacheAtual();
+  return dadosCache.dados !== null && Date.now() < dadosCache.expiraEm;
 }
 
-// ── Token ──
+function dadosSaoValidos(json) {
+  // Só aceita cache se tiver itens com Cota_Adotada numérica válida
+  if (!json || !json.items || !Array.isArray(json.items) || json.items.length === 0) return false;
+  const temCotaValida = json.items.some(item => {
+    const cota = parseFloat(item.Cota_Adotada);
+    return !isNaN(cota);
+  });
+  return temCotaValida;
+}
+
+// ── Token ──────────────────────────────────────────────
 let tokenCache = { token: null, expiraEm: 0 };
 
 async function getToken() {
@@ -86,7 +80,7 @@ async function getToken() {
   return token;
 }
 
-// ── Busca dados da ANA ──
+// ── Busca dados da ANA ─────────────────────────────────
 async function buscarDadosANA(codigo) {
   const token = await getToken();
   const fetch = (await import("node-fetch")).default;
@@ -108,29 +102,31 @@ async function buscarDadosANA(codigo) {
   return JSON.parse(txt);
 }
 
-// ── Rota principal ──
+// ── Rota principal ─────────────────────────────────────
 app.get("/api/dados/:codigo", async (req, res) => {
   const { codigo } = req.params;
   try {
-    // Se cache válido, retorna imediatamente sem chamar a ANA
     if (cacheValido()) {
       console.log("📦 Servindo do cache:", new Date().toLocaleTimeString("pt-BR"));
       return res.json(dadosCache.dados);
     }
 
-    // Cache expirado — busca dados novos
     const json = await buscarDadosANA(codigo);
 
-    // Salva no cache com a hora cheia atual
-    dadosCache = { dados: json, horaCheia: horaCheiaCacheAtual() };
-    console.log("💾 Cache atualizado:", new Date().toLocaleTimeString("pt-BR"));
+    // Só salva no cache se os dados forem válidos (com cota numérica)
+    if (dadosSaoValidos(json)) {
+      dadosCache = { dados: json, expiraEm: Date.now() + 15 * 60 * 1000 };
+      console.log("💾 Cache atualizado com dados válidos:", new Date().toLocaleTimeString("pt-BR"));
+    } else {
+      console.warn("⚠️ Dados inválidos recebidos da ANA — cache NÃO atualizado");
+    }
 
     res.json(json);
   } catch (err) {
     console.error("Erro:", err.message);
-    // Se tiver cache antigo, serve ele em caso de erro
-    if (dadosCache.dados) {
-      console.warn("⚠️ Erro na ANA, servindo cache antigo");
+    // Se tiver cache válido com dados, serve ele em caso de erro
+    if (dadosCache.dados && dadosSaoValidos(dadosCache.dados)) {
+      console.warn("⚠️ Erro na ANA, servindo cache anterior válido");
       return res.json(dadosCache.dados);
     }
     res.status(500).json({ erro: err.message });
