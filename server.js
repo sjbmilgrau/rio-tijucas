@@ -10,6 +10,7 @@ const ANA_PASS = process.env.ANA_PASS;
 const DOMINIO  = process.env.SITE_DOMINIO || "https://www.sjbmilgrau.com.br";
 const PORT     = process.env.PORT || 3000;
 const ANA_BASE = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas";
+const ESTACAO  = "84095500";
 
 const DOMINIOS_PERMITIDOS = [
   DOMINIO,
@@ -46,20 +47,25 @@ app.get("/widget", (req, res) => {
 app.use(express.static(__dirname));
 
 // ── Cache ──────────────────────────────────────────────
-let dadosCache = { dados: null, expiraEm: 0 };
-
-function cacheValido() {
-  return dadosCache.dados !== null && Date.now() < dadosCache.expiraEm;
-}
+let dadosCache = { dados: null, ultimaMedicao: null };
 
 function dadosSaoValidos(json) {
-  // Só aceita cache se tiver itens com Cota_Adotada numérica válida
   if (!json || !json.items || !Array.isArray(json.items) || json.items.length === 0) return false;
-  const temCotaValida = json.items.some(item => {
-    const cota = parseFloat(item.Cota_Adotada);
-    return !isNaN(cota);
-  });
-  return temCotaValida;
+  return json.items.some(item => !isNaN(parseFloat(item.Cota_Adotada)));
+}
+
+function ultimaMedicaoCache(json) {
+  // Pega o Data_Hora_Medicao do último item
+  const sorted = [...json.items].sort((a,b) =>
+    new Date(b.Data_Hora_Medicao) - new Date(a.Data_Hora_Medicao)
+  );
+  return sorted[0].Data_Hora_Medicao;
+}
+
+function temDadosNovos(json) {
+  if (!dadosCache.ultimaMedicao) return true; // sem cache anterior = sempre novo
+  const novaMedicao = ultimaMedicaoCache(json);
+  return novaMedicao !== dadosCache.ultimaMedicao;
 }
 
 // ── Token ──────────────────────────────────────────────
@@ -80,105 +86,124 @@ async function getToken() {
   return token;
 }
 
-// ── Busca dados da ANA (com retry) ────────────────────
-const RETRY_TENTATIVAS = 3;
-const RETRY_INTERVALO  = 5000; // 5 segundos entre tentativas
-
-function esperar(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+// ── Busca dados da ANA ─────────────────────────────────
+async function buscarDadosANA() {
+  const token = await getToken();
+  const fetch = (await import("node-fetch")).default;
+  const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
+    `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${ESTACAO}` +
+    `&Tipo%20Filtro%20Data=DATA_LEITURA` +
+    `&Range%20Intervalo%20de%20busca=DIAS_2`;
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+  const txt = await r.text();
+  if (!r.ok) {
+    if (r.status === 401) { tokenCache = { token: null, expiraEm: 0 }; }
+    throw new Error(`ANA status ${r.status}`);
+  }
+  return JSON.parse(txt);
 }
 
-async function buscarDadosANA(codigo) {
-  for (let tentativa = 1; tentativa <= RETRY_TENTATIVAS; tentativa++) {
-    try {
-      const token = await getToken();
-      const fetch = (await import("node-fetch")).default;
-      const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
-        `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${codigo}` +
-        `&Tipo%20Filtro%20Data=DATA_LEITURA` +
-        `&Range%20Intervalo%20de%20busca=DIAS_2`;
-      console.log(`🔄 Tentativa ${tentativa}/${RETRY_TENTATIVAS} — ANA:`, new Date().toLocaleTimeString("pt-BR"));
-      const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      const txt = await r.text();
-      console.log("Resposta ANA status:", r.status);
-      if (!r.ok) {
-        if (r.status === 401) {
-          tokenCache = { token: null, expiraEm: 0 };
-          console.warn("⚠️ Token expirado (401), renovando...");
-        }
-        throw new Error(`ANA status ${r.status}`);
-      }
-      const json = JSON.parse(txt);
-      if (!dadosSaoValidos(json)) {
-        throw new Error("Dados inválidos recebidos da ANA");
-      }
-      console.log(`✅ Dados válidos na tentativa ${tentativa}`);
-      return json;
-    } catch (err) {
-      console.warn(`⚠️ Tentativa ${tentativa} falhou: ${err.message}`);
-      if (tentativa < RETRY_TENTATIVAS) {
-        console.log(`⏳ Aguardando ${RETRY_INTERVALO/1000}s antes de tentar novamente...`);
-        await esperar(RETRY_INTERVALO);
-      } else {
-        throw new Error(`Todas as ${RETRY_TENTATIVAS} tentativas falharam: ${err.message}`);
-      }
+// ── Agendador principal ────────────────────────────────
+// Lógica:
+// 1. Nos minutos :07, :22, :37, :52 → dispara busca
+// 2. Se não houver dados novos → tenta novamente no próximo minuto
+// 3. Quando encontrar dados novos → atualiza cache e para de tentar
+// 4. No próximo :07 (ou :22, :37, :52) → reinicia o processo
+
+let buscandoNovos = false;
+let retryInterval = null;
+
+async function tentarAtualizar(motivo) {
+  console.log(`🔄 Buscando dados [${motivo}]:`, new Date().toLocaleTimeString("pt-BR"));
+  try {
+    const json = await buscarDadosANA();
+    if (!dadosSaoValidos(json)) {
+      console.warn("⚠️ Dados inválidos da ANA, mantendo cache anterior");
+      return false;
     }
+    if (!temDadosNovos(json)) {
+      console.log("📭 Sem dados novos ainda, tentará no próximo minuto");
+      return false;
+    }
+    // Dados novos encontrados!
+    dadosCache = { dados: json, ultimaMedicao: ultimaMedicaoCache(json) };
+    console.log("💾 Cache atualizado! Última medição:", dadosCache.ultimaMedicao);
+    return true;
+  } catch (err) {
+    console.error("❌ Erro ao buscar:", err.message);
+    return false;
   }
 }
 
-// ── Agendador de retry a cada 2 min se cache inválido ─
-let retryTimer = null;
+function pararRetry() {
+  if (retryInterval) {
+    clearInterval(retryInterval);
+    retryInterval = null;
+    buscandoNovos = false;
+    console.log("✅ Dados novos encontrados — retry encerrado");
+  }
+}
 
-function iniciarRetry(codigo) {
-  if (retryTimer) return; // já está rodando
-  console.log("🔁 Iniciando retry a cada 2 minutos até obter dados válidos...");
-  retryTimer = setInterval(async () => {
-    try {
-      console.log("🔁 Retry agendado:", new Date().toLocaleTimeString("pt-BR"));
-      const json = await buscarDadosANA(codigo);
-      dadosCache = { dados: json, expiraEm: Date.now() + 15 * 60 * 1000 };
-      console.log("✅ Retry bem-sucedido! Cache atualizado:", new Date().toLocaleTimeString("pt-BR"));
-      clearInterval(retryTimer);
-      retryTimer = null;
-    } catch (err) {
-      console.warn("⚠️ Retry falhou, tentará novamente em 2 min:", err.message);
+function iniciarBuscaComRetry() {
+  if (buscandoNovos) return; // já está em retry
+  buscandoNovos = true;
+
+  // Tenta imediatamente
+  tentarAtualizar("agendado").then(sucesso => {
+    if (sucesso) { buscandoNovos = false; return; }
+    // Se não achou, tenta a cada 1 minuto
+    console.log("🔁 Iniciando retry a cada 1 minuto...");
+    retryInterval = setInterval(async () => {
+      const sucesso = await tentarAtualizar("retry 1min");
+      if (sucesso) pararRetry();
+    }, 60 * 1000);
+  });
+}
+
+function agendarLoop() {
+  // Verifica a cada 30 segundos se chegou no horário :07, :22, :37, :52
+  setInterval(() => {
+    const min = new Date().getMinutes();
+    const seg = new Date().getSeconds();
+    // Dispara nos horários alvo com tolerância de 30 segundos
+    if ([7, 22, 37, 52].includes(min) && seg < 30 && !buscandoNovos) {
+      console.log(`⏰ Horário alvo atingido (:${String(min).padStart(2,'0')}) — iniciando busca`);
+      iniciarBuscaComRetry();
     }
-  }, 2 * 60 * 1000); // 2 minutos
+  }, 30 * 1000); // verifica a cada 30 segundos
 }
 
 // ── Rota principal ─────────────────────────────────────
 app.get("/api/dados/:codigo", async (req, res) => {
-  const { codigo } = req.params;
+  // Se tiver cache, serve imediatamente
+  if (dadosCache.dados) {
+    console.log("📦 Servindo do cache:", new Date().toLocaleTimeString("pt-BR"));
+    return res.json(dadosCache.dados);
+  }
+  // Sem cache nenhum — busca agora (primeira vez)
   try {
-    if (cacheValido()) {
-      console.log("📦 Servindo do cache:", new Date().toLocaleTimeString("pt-BR"));
-      return res.json(dadosCache.dados);
+    console.log("🆕 Sem cache — buscando pela primeira vez");
+    const json = await buscarDadosANA();
+    if (dadosSaoValidos(json)) {
+      dadosCache = { dados: json, ultimaMedicao: ultimaMedicaoCache(json) };
+      console.log("💾 Cache inicial criado:", dadosCache.ultimaMedicao);
     }
-
-    try {
-      const json = await buscarDadosANA(codigo);
-      dadosCache = { dados: json, expiraEm: Date.now() + 15 * 60 * 1000 };
-      console.log("💾 Cache atualizado:", new Date().toLocaleTimeString("pt-BR"));
-      if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
-      return res.json(json);
-    } catch (err) {
-      console.error("❌ Falha ao buscar dados:", err.message);
-      // Inicia retry em background a cada 2 minutos
-      iniciarRetry(codigo);
-      // Se tiver cache antigo, serve ele
-      if (dadosCache.dados && dadosSaoValidos(dadosCache.dados)) {
-        console.warn("⚠️ Servindo cache anterior enquanto retry roda em background");
-        return res.json(dadosCache.dados);
-      }
-      return res.status(500).json({ erro: err.message });
-    }
+    return res.json(json);
   } catch (err) {
-    console.error("Erro inesperado:", err.message);
-    res.status(500).json({ erro: err.message });
+    console.error("Erro:", err.message);
+    return res.status(500).json({ erro: err.message });
   }
 });
 
+// ── Iniciar ────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n🌊 Widget Rio Tijucas na porta ${PORT}`);
   console.log(`   Domínio: ${DOMINIO}\n`);
+
+  // Busca inicial ao iniciar servidor
+  tentarAtualizar("inicialização").then(() => {
+    // Inicia o loop de agendamento
+    agendarLoop();
+    console.log("⏰ Agendador iniciado — buscará nos minutos :07, :22, :37, :52");
+  });
 });
