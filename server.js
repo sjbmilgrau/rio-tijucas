@@ -55,7 +55,6 @@ function dadosSaoValidos(json) {
 }
 
 function ultimaMedicaoCache(json) {
-  // Pega o Data_Hora_Medicao do último item
   const sorted = [...json.items].sort((a,b) =>
     new Date(b.Data_Hora_Medicao) - new Date(a.Data_Hora_Medicao)
   );
@@ -63,9 +62,8 @@ function ultimaMedicaoCache(json) {
 }
 
 function temDadosNovos(json) {
-  if (!dadosCache.ultimaMedicao) return true; // sem cache anterior = sempre novo
-  const novaMedicao = ultimaMedicaoCache(json);
-  return novaMedicao !== dadosCache.ultimaMedicao;
+  if (!dadosCache.ultimaMedicao) return true;
+  return ultimaMedicaoCache(json) !== dadosCache.ultimaMedicao;
 }
 
 // ── Token ──────────────────────────────────────────────
@@ -103,34 +101,32 @@ async function buscarDadosANA() {
   return JSON.parse(txt);
 }
 
-// ── Agendador principal ────────────────────────────────
-// Lógica:
-// 1. Nos minutos :07, :22, :37, :52 → dispara busca
-// 2. Se não houver dados novos → tenta novamente no próximo minuto
-// 3. Quando encontrar dados novos → atualiza cache e para de tentar
-// 4. No próximo :07 (ou :22, :37, :52) → reinicia o processo
+// ── Agendador ──────────────────────────────────────────
+// Horários alvo: :07, :14, :21, :28, :35, :42, :49, :56
+// Em cada horário alvo, busca de minuto em minuto até encontrar dados novos
+// ou até o próximo horário alvo (7 tentativas máximo por janela)
 
-let buscandoNovos = false;
+const ALVOS = [7, 14, 21, 28, 35, 42, 49, 56];
 let retryInterval = null;
+let buscandoNovos = false;
 
 async function tentarAtualizar(motivo) {
-  console.log(`🔄 Buscando dados [${motivo}]:`, new Date().toLocaleTimeString("pt-BR"));
+  console.log(`🔄 Buscando [${motivo}]:`, new Date().toLocaleTimeString("pt-BR"));
   try {
     const json = await buscarDadosANA();
     if (!dadosSaoValidos(json)) {
-      console.warn("⚠️ Dados inválidos da ANA, mantendo cache anterior");
+      console.warn("⚠️ Dados inválidos, mantendo cache");
       return false;
     }
     if (!temDadosNovos(json)) {
-      console.log("📭 Sem dados novos ainda, tentará no próximo minuto");
+      console.log("📭 Sem dados novos ainda...");
       return false;
     }
-    // Dados novos encontrados!
     dadosCache = { dados: json, ultimaMedicao: ultimaMedicaoCache(json) };
     console.log("💾 Cache atualizado! Última medição:", dadosCache.ultimaMedicao);
     return true;
   } catch (err) {
-    console.error("❌ Erro ao buscar:", err.message);
+    console.error("❌ Erro:", err.message);
     return false;
   }
 }
@@ -140,53 +136,53 @@ function pararRetry() {
     clearInterval(retryInterval);
     retryInterval = null;
     buscandoNovos = false;
-    console.log("✅ Dados novos encontrados — retry encerrado");
+    console.log("✅ Retry encerrado — dados encontrados");
   }
 }
 
-function iniciarBuscaComRetry() {
-  if (buscandoNovos) return; // já está em retry
+function iniciarJanela(minAlvo) {
+  if (buscandoNovos) {
+    // Já está em retry de janela anterior — para e começa nova janela
+    pararRetry();
+  }
   buscandoNovos = true;
+  const proxAlvo = ALVOS[(ALVOS.indexOf(minAlvo) + 1) % ALVOS.length];
+  console.log(`⏰ Janela :${String(minAlvo).padStart(2,'0')} aberta — retry a cada 1min até :${String(proxAlvo).padStart(2,'0')}`);
 
   // Tenta imediatamente
-  tentarAtualizar("agendado").then(sucesso => {
+  tentarAtualizar(`janela :${String(minAlvo).padStart(2,'0')}`).then(sucesso => {
     if (sucesso) { buscandoNovos = false; return; }
-    // Se não achou, tenta a cada 1 minuto
-    console.log("🔁 Iniciando retry a cada 1 minuto...");
+    // Retry a cada 1 minuto
     retryInterval = setInterval(async () => {
-      const sucesso = await tentarAtualizar("retry 1min");
-      if (sucesso) pararRetry();
+      const ok = await tentarAtualizar("retry 1min");
+      if (ok) pararRetry();
     }, 60 * 1000);
   });
 }
 
 function agendarLoop() {
-  // Verifica a cada 30 segundos se chegou no horário :07, :22, :37, :52
   setInterval(() => {
     const min = new Date().getMinutes();
     const seg = new Date().getSeconds();
-    // Dispara nos horários alvo com tolerância de 30 segundos
-    if ([7, 22, 37, 52].includes(min) && seg < 30 && !buscandoNovos) {
-      console.log(`⏰ Horário alvo atingido (:${String(min).padStart(2,'0')}) — iniciando busca`);
-      iniciarBuscaComRetry();
+    // Dispara no segundo 0-29 dos minutos alvo
+    if (ALVOS.includes(min) && seg < 30 && !buscandoNovos) {
+      iniciarJanela(min);
     }
-  }, 30 * 1000); // verifica a cada 30 segundos
+  }, 30 * 1000);
 }
 
 // ── Rota principal ─────────────────────────────────────
 app.get("/api/dados/:codigo", async (req, res) => {
-  // Se tiver cache, serve imediatamente
   if (dadosCache.dados) {
-    console.log("📦 Servindo do cache:", new Date().toLocaleTimeString("pt-BR"));
+    console.log("📦 Cache:", new Date().toLocaleTimeString("pt-BR"));
     return res.json(dadosCache.dados);
   }
-  // Sem cache nenhum — busca agora (primeira vez)
   try {
     console.log("🆕 Sem cache — buscando pela primeira vez");
     const json = await buscarDadosANA();
     if (dadosSaoValidos(json)) {
       dadosCache = { dados: json, ultimaMedicao: ultimaMedicaoCache(json) };
-      console.log("💾 Cache inicial criado:", dadosCache.ultimaMedicao);
+      console.log("💾 Cache inicial:", dadosCache.ultimaMedicao);
     }
     return res.json(json);
   } catch (err) {
@@ -200,10 +196,9 @@ app.listen(PORT, () => {
   console.log(`\n🌊 Widget Rio Tijucas na porta ${PORT}`);
   console.log(`   Domínio: ${DOMINIO}\n`);
 
-  // Busca inicial ao iniciar servidor
   tentarAtualizar("inicialização").then(() => {
-    // Inicia o loop de agendamento
     agendarLoop();
-    console.log("⏰ Agendador iniciado — buscará nos minutos :07, :22, :37, :52");
+    console.log("⏰ Agendador iniciado — janelas em :07, :14, :21, :28, :35, :42, :49, :56");
+    console.log("   Cada janela tenta de 1 em 1 minuto até encontrar dados novos\n");
   });
 });
