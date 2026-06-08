@@ -69,7 +69,7 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   <div class="rt-body">
     <div class="rt-left">
       <div class="rt-num" id="rtNum">—</div>
-      <div class="rt-unit">metros</div>
+      <div class="rt-unit">metros (cota)</div>
       <div class="rt-pill" id="rtPill"><span id="rtIcon"></span><span id="rtLabel">Carregando...</span></div>
     </div>
     <div class="rt-div"></div>
@@ -160,18 +160,17 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   }
 
   function proxAtualizacao(){
-    var now=new Date();
-    var min=now.getMinutes();
-    // Horários de atualização: :07, :22, :37, :52
-    var alvos=[7,22,37,52];
-    var proxMin=alvos.find(function(m){return m>min;});
-    var prox=new Date(now);
-    prox.setSeconds(0);prox.setMilliseconds(0);
-    if(proxMin===undefined){prox.setHours(prox.getHours()+1);prox.setMinutes(7);}
-    else{prox.setMinutes(proxMin);}
-    var diff=Math.round((prox-now)/60000);
-    if(diff<1)diff=1;
-    return 'Próxima: '+pad(prox.getHours())+'h'+pad(prox.getMinutes())+' (em '+diff+'min)';
+    var now = new Date();
+    var prox = new Date(now);
+    prox.setSeconds(0);
+    // Sempre xx:07 — antes dos 7min mostra hora atual + 07, depois mostra próxima hora + 07
+    if(now.getMinutes() < 7){
+      prox.setMinutes(7);
+    } else {
+      prox.setHours(prox.getHours() + 1);
+      prox.setMinutes(7);
+    }
+    return 'Próxima: ' + pad(prox.getHours()) + 'h' + pad(prox.getMinutes());
   }
 
   function render(cotaCm,md,dataLeitura){
