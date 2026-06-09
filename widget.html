@@ -122,10 +122,10 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
 (function(){
   var API_BASE  = 'https://rio-tijucas.onrender.com';
   var ESTACAO   = '84095500';
-  var INTERVALO = 5 * 60 * 1000; // 5 minutos — servidor responde do cache, sem sobrecarregar ANA
+  var INTERVALO = 60 * 1000; // 1 minuto — tenta sempre que possível, cache garante continuidade
   var WATER_H   = 96;
   var rainOn    = false;
-  var ultimosDados = null; // último resultado válido para fallback
+  var ultimosDados = null; // último array de items com ao menos 1 medição válida
 
   var COLOR_SCALE = [
     {maxCm:50,   bg:'linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%)',shadow:'0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6)',water1:'rgba(55,138,221,.70)',water2:'rgba(55,138,221,.38)',fill:'rgba(55,138,221,.50)',num:'#0c447c',pill:'rgba(200,225,248,.60)',pillText:'#0c447c',arrowGrad:'rtGrise0'},
@@ -213,21 +213,33 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   }
 
   function processarItems(items){
-    items.sort(function(a,b){
+    // Filtra apenas itens com Cota válida (não nula, não NaN)
+    var validos = items.filter(function(i){
+      return i.Cota_Adotada !== null &&
+             i.Cota_Adotada !== undefined &&
+             !isNaN(parseFloat(i.Cota_Adotada));
+    });
+
+    if(!validos.length) return false; // nenhum dado válido → sinaliza para usar cache
+
+    validos.sort(function(a,b){
       return new Date(a.Data_Hora_Medicao.replace(' ','T')) - new Date(b.Data_Hora_Medicao.replace(' ','T'));
     });
-    var last = items[items.length - 1];
+
+    var last = validos[validos.length - 1];
     var cotaAtual = parseFloat(last.Cota_Adotada);
-    if(isNaN(cotaAtual)) return false;
+
     var prev = null;
-    for(var i = items.length - 2; i >= 0; i--){
-      if(parseFloat(items[i].Cota_Adotada) !== cotaAtual){ prev = items[i]; break; }
+    for(var i = validos.length - 2; i >= 0; i--){
+      if(parseFloat(validos[i].Cota_Adotada) !== cotaAtual){ prev = validos[i]; break; }
     }
+
     var cotaAnterior = prev ? parseFloat(prev.Cota_Adotada) : cotaAtual;
     var diff = cotaAtual - cotaAnterior;
     var md   = diff > 0.5 ? 'rising' : diff < -0.5 ? 'falling' : 'stable';
     var dataLeitura = new Date(last.Data_Hora_Medicao.replace(' ','T'));
     var chuva = parseFloat(last.Chuva_Adotada || 0);
+
     render(cotaAtual, md, dataLeitura);
     setRain(chuva > 0.5);
     return true;
@@ -254,21 +266,38 @@ body{background:transparent;display:flex;justify-content:center;align-items:flex
   async function fetchDados(){
     try{
       var r = await fetch(API_BASE + '/api/dados/' + ESTACAO);
-      if(!r.ok) return;
+
+      // Erro de rede ou servidor → mantém cache
+      if(!r.ok){
+        if(ultimosDados) processarItems(ultimosDados);
+        return;
+      }
+
       var json = await r.json();
       var items = json.items;
 
-      // Se não vier dados, usa o último válido
+      // Array vazio → mantém cache
       if(!items || !items.length){
         if(ultimosDados) processarItems(ultimosDados);
         return;
       }
 
-      // Salva como último válido e processa
-      ultimosDados = items;
-      processarItems(items);
+      // Tenta processar novos dados (filtra nulos internamente)
+      var ok = processarItems(items);
 
-    } catch(e){ console.warn('Rio Tijucas:', e); }
+      if(ok){
+        // Só substitui o cache se havia ao menos 1 medição válida nos novos dados
+        ultimosDados = items;
+      } else {
+        // Todos os itens vieram nulos → mantém cache anterior
+        if(ultimosDados) processarItems(ultimosDados);
+      }
+
+    } catch(e){
+      console.warn('Rio Tijucas fetch error:', e);
+      // Qualquer exceção → mantém cache
+      if(ultimosDados) processarItems(ultimosDados);
+    }
   }
 
   buildRuler();
