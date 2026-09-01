@@ -49,13 +49,24 @@ app.use(express.static(__dirname));
 // ── Cache ──────────────────────────────────────────────
 let dadosCache = { dados: null, ultimaMedicao: null };
 
+function filtrarItensValidos(items) {
+  // Remove registros com Cota_Adotada null ou inválida
+  return items.filter(item =>
+    item.Cota_Adotada !== null &&
+    item.Cota_Adotada !== undefined &&
+    !isNaN(parseFloat(item.Cota_Adotada))
+  );
+}
+
 function dadosSaoValidos(json) {
-  if (!json || !json.items || !Array.isArray(json.items) || json.items.length === 0) return false;
-  return json.items.some(item => !isNaN(parseFloat(item.Cota_Adotada)));
+  if (!json || !json.items || !Array.isArray(json.items)) return false;
+  const validos = filtrarItensValidos(json.items);
+  return validos.length > 0;
 }
 
 function ultimaMedicaoCache(json) {
-  const sorted = [...json.items].sort((a,b) =>
+  const validos = filtrarItensValidos(json.items);
+  const sorted = [...validos].sort((a,b) =>
     new Date(b.Data_Hora_Medicao) - new Date(a.Data_Hora_Medicao)
   );
   return sorted[0].Data_Hora_Medicao;
@@ -64,6 +75,14 @@ function ultimaMedicaoCache(json) {
 function temDadosNovos(json) {
   if (!dadosCache.ultimaMedicao) return true;
   return ultimaMedicaoCache(json) !== dadosCache.ultimaMedicao;
+}
+
+// Retorna JSON filtrado — apenas itens com Cota válida
+function jsonFiltrado(json) {
+  return {
+    ...json,
+    items: filtrarItensValidos(json.items)
+  };
 }
 
 // ── Token ──────────────────────────────────────────────
@@ -102,10 +121,6 @@ async function buscarDadosANA() {
 }
 
 // ── Agendador ──────────────────────────────────────────
-// Horários alvo: :07, :14, :21, :28, :35, :42, :49, :56
-// Em cada horário alvo, busca de minuto em minuto até encontrar dados novos
-// ou até o próximo horário alvo (7 tentativas máximo por janela)
-
 const ALVOS = [7, 14, 21, 28, 35, 42, 49, 56];
 let retryInterval = null;
 let buscandoNovos = false;
@@ -115,14 +130,15 @@ async function tentarAtualizar(motivo) {
   try {
     const json = await buscarDadosANA();
     if (!dadosSaoValidos(json)) {
-      console.warn("⚠️ Dados inválidos, mantendo cache");
+      console.warn("⚠️ Sem itens válidos (Cota null?), mantendo cache");
       return false;
     }
     if (!temDadosNovos(json)) {
       console.log("📭 Sem dados novos ainda...");
       return false;
     }
-    dadosCache = { dados: json, ultimaMedicao: ultimaMedicaoCache(json) };
+    // Salva apenas itens com Cota válida
+    dadosCache = { dados: jsonFiltrado(json), ultimaMedicao: ultimaMedicaoCache(json) };
     console.log("💾 Cache atualizado! Última medição:", dadosCache.ultimaMedicao);
     return true;
   } catch (err) {
@@ -141,18 +157,13 @@ function pararRetry() {
 }
 
 function iniciarJanela(minAlvo) {
-  if (buscandoNovos) {
-    // Já está em retry de janela anterior — para e começa nova janela
-    pararRetry();
-  }
+  if (buscandoNovos) pararRetry();
   buscandoNovos = true;
   const proxAlvo = ALVOS[(ALVOS.indexOf(minAlvo) + 1) % ALVOS.length];
-  console.log(`⏰ Janela :${String(minAlvo).padStart(2,'0')} aberta — retry a cada 1min até :${String(proxAlvo).padStart(2,'0')}`);
+  console.log(`⏰ Janela :${String(minAlvo).padStart(2,'0')} aberta — retry até :${String(proxAlvo).padStart(2,'0')}`);
 
-  // Tenta imediatamente
   tentarAtualizar(`janela :${String(minAlvo).padStart(2,'0')}`).then(sucesso => {
     if (sucesso) { buscandoNovos = false; return; }
-    // Retry a cada 1 minuto
     retryInterval = setInterval(async () => {
       const ok = await tentarAtualizar("retry 1min");
       if (ok) pararRetry();
@@ -164,7 +175,6 @@ function agendarLoop() {
   setInterval(() => {
     const min = new Date().getMinutes();
     const seg = new Date().getSeconds();
-    // Dispara no segundo 0-29 dos minutos alvo
     if (ALVOS.includes(min) && seg < 30 && !buscandoNovos) {
       iniciarJanela(min);
     }
@@ -181,10 +191,10 @@ app.get("/api/dados/:codigo", async (req, res) => {
     console.log("🆕 Sem cache — buscando pela primeira vez");
     const json = await buscarDadosANA();
     if (dadosSaoValidos(json)) {
-      dadosCache = { dados: json, ultimaMedicao: ultimaMedicaoCache(json) };
+      dadosCache = { dados: jsonFiltrado(json), ultimaMedicao: ultimaMedicaoCache(json) };
       console.log("💾 Cache inicial:", dadosCache.ultimaMedicao);
     }
-    return res.json(json);
+    return res.json(dadosCache.dados || json);
   } catch (err) {
     console.error("Erro:", err.message);
     return res.status(500).json({ erro: err.message });
@@ -198,7 +208,7 @@ app.listen(PORT, () => {
 
   tentarAtualizar("inicialização").then(() => {
     agendarLoop();
-    console.log("⏰ Agendador iniciado — janelas em :07, :14, :21, :28, :35, :42, :49, :56");
-    console.log("   Cada janela tenta de 1 em 1 minuto até encontrar dados novos\n");
+    console.log("⏰ Agendador: :07, :14, :21, :28, :35, :42, :49, :56");
+    console.log("   Filtrando itens com Cota_Adotada null automaticamente\n");
   });
 });
