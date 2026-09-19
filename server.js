@@ -50,7 +50,6 @@ app.use(express.static(__dirname));
 let dadosCache = { dados: null, ultimaMedicao: null };
 
 function filtrarItensValidos(items) {
-  // Remove registros com Cota_Adotada null ou inválida
   return items.filter(item =>
     item.Cota_Adotada !== null &&
     item.Cota_Adotada !== undefined &&
@@ -60,8 +59,7 @@ function filtrarItensValidos(items) {
 
 function dadosSaoValidos(json) {
   if (!json || !json.items || !Array.isArray(json.items)) return false;
-  const validos = filtrarItensValidos(json.items);
-  return validos.length > 0;
+  return filtrarItensValidos(json.items).length > 0;
 }
 
 function ultimaMedicaoCache(json) {
@@ -77,12 +75,8 @@ function temDadosNovos(json) {
   return ultimaMedicaoCache(json) !== dadosCache.ultimaMedicao;
 }
 
-// Retorna JSON filtrado — apenas itens com Cota válida
 function jsonFiltrado(json) {
-  return {
-    ...json,
-    items: filtrarItensValidos(json.items)
-  };
+  return { ...json, items: filtrarItensValidos(json.items) };
 }
 
 // ── Token ──────────────────────────────────────────────
@@ -107,17 +101,28 @@ async function getToken() {
 async function buscarDadosANA() {
   const token = await getToken();
   const fetch = (await import("node-fetch")).default;
-  const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
-    `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${ESTACAO}` +
-    `&Tipo%20Filtro%20Data=DATA_LEITURA` +
-    `&Range%20Intervalo%20de%20busca=DIAS_2`;
-  const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  const txt = await r.text();
-  if (!r.ok) {
-    if (r.status === 401) { tokenCache = { token: null, expiraEm: 0 }; }
-    throw new Error(`ANA status ${r.status}`);
+
+  // Tenta DIAS_2 primeiro, se vier vazio tenta DIAS_7
+  for (const periodo of ["DIAS_2", "DIAS_7"]) {
+    const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
+      `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${ESTACAO}` +
+      `&Tipo%20Filtro%20Data=DATA_LEITURA` +
+      `&Range%20Intervalo%20de%20busca=${periodo}`;
+    console.log(`📡 Buscando [${periodo}]:`, new Date().toLocaleTimeString("pt-BR"));
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const txt = await r.text();
+    if (!r.ok) {
+      if (r.status === 401) { tokenCache = { token: null, expiraEm: 0 }; }
+      throw new Error(`ANA status ${r.status}`);
+    }
+    const json = JSON.parse(txt);
+    if (dadosSaoValidos(json)) {
+      console.log(`✅ Dados encontrados com ${periodo}`);
+      return json;
+    }
+    console.warn(`⚠️ Sem dados válidos com ${periodo}, tentando período maior...`);
   }
-  return JSON.parse(txt);
+  throw new Error("Sem dados válidos mesmo com DIAS_7");
 }
 
 // ── Agendador ──────────────────────────────────────────
@@ -130,14 +135,13 @@ async function tentarAtualizar(motivo) {
   try {
     const json = await buscarDadosANA();
     if (!dadosSaoValidos(json)) {
-      console.warn("⚠️ Sem itens válidos (Cota null?), mantendo cache");
+      console.warn("⚠️ Sem itens válidos, mantendo cache");
       return false;
     }
     if (!temDadosNovos(json)) {
       console.log("📭 Sem dados novos ainda...");
       return false;
     }
-    // Salva apenas itens com Cota válida
     dadosCache = { dados: jsonFiltrado(json), ultimaMedicao: ultimaMedicaoCache(json) };
     console.log("💾 Cache atualizado! Última medição:", dadosCache.ultimaMedicao);
     return true;
@@ -209,6 +213,6 @@ app.listen(PORT, () => {
   tentarAtualizar("inicialização").then(() => {
     agendarLoop();
     console.log("⏰ Agendador: :07, :14, :21, :28, :35, :42, :49, :56");
-    console.log("   Filtrando itens com Cota_Adotada null automaticamente\n");
+    console.log("   Fallback automático DIAS_2 → DIAS_7 se sem dados\n");
   });
 });
