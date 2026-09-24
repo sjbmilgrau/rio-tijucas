@@ -205,6 +205,33 @@ app.get("/api/dados/:codigo", async (req, res) => {
   }
 });
 
+// ── Clima (Open-Meteo) ─────────────────────────────────
+let climaCache = { dados: null, expiraEm: 0 };
+
+app.get("/api/clima", async (req, res) => {
+  if (climaCache.dados && Date.now() < climaCache.expiraEm) return res.json(climaCache.dados);
+  try {
+    const fetch = (await import("node-fetch")).default;
+    const url = "https://api.open-meteo.com/v1/forecast?latitude=-27.2761&longitude=-48.8494" +
+      "&hourly=precipitation,precipitation_probability&forecast_hours=12&timezone=America%2FSao_Paulo";
+    const j = await (await fetch(url)).json();
+    const mm = j.hourly.precipitation;
+    climaCache = {
+      dados: {
+        horas: j.hourly.time,
+        mm,
+        prob: j.hourly.precipitation_probability,
+        total12h: +mm.reduce((a, b) => a + b, 0).toFixed(1)
+      },
+      expiraEm: Date.now() + 30 * 60 * 1000
+    };
+    res.json(climaCache.dados);
+  } catch (e) {
+    console.error("Erro clima:", e.message);
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 // ── Iniciar ────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`\n🌊 Widget Rio Tijucas na porta ${PORT}`);
