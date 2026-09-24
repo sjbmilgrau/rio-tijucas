@@ -103,7 +103,7 @@ async function buscarDadosANA() {
   const fetch = (await import("node-fetch")).default;
 
   // Tenta DIAS_2 primeiro, se vier vazio tenta DIAS_7
-  for (const periodo of ["DIAS_2", "DIAS_7"]) {
+  for (const periodo of ["DIAS_2", "DIAS_10"]) {
     const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
       `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${ESTACAO}` +
       `&Tipo%20Filtro%20Data=DATA_LEITURA` +
@@ -122,7 +122,7 @@ async function buscarDadosANA() {
     }
     console.warn(`⚠️ Sem dados válidos com ${periodo}, tentando período maior...`);
   }
-  throw new Error("Sem dados válidos mesmo com DIAS_7");
+  throw new Error("Sem dados válidos mesmo com DIAS_10");
 }
 
 // ── Agendador ──────────────────────────────────────────
