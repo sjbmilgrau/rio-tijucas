@@ -1,310 +1,105 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nível do Rio Tijucas</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:transparent;display:flex;justify-content:center;align-items:flex-start;padding:0;margin:0}
-.rt-scene{font-family:'Inter',sans-serif;width:100%;max-width:620px;min-height:220px;border-radius:22px;position:relative;overflow:hidden;padding:18px 24px 14px;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6);transition:background 1.4s ease,box-shadow 1.4s ease}
-.rt-rain{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.2s}
-.rt-rain.on{opacity:1}
-.rt-drop{position:absolute;width:1.5px;border-radius:2px;animation:rtfall linear infinite;opacity:.5}
-@keyframes rtfall{from{transform:translateY(-40px)}to{transform:translateY(400px)}}
-.rt-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;position:relative;z-index:2}
-.rt-logo-box{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
-.rt-logo-box img{width:28px;height:28px;object-fit:contain}
-.rt-logo-fallback{font-size:11px;font-weight:700;color:#185FA5;letter-spacing:-.5px}
-.rt-logo-area{display:flex;align-items:center;gap:10px}
-.rt-title{font-size:14px;font-weight:600;color:#1a2e44;letter-spacing:-.3px}
-.rt-sub{font-size:11px;color:rgba(30,50,80,.6);margin-top:1px}
-.rt-body{display:flex;align-items:center;flex:1;position:relative;z-index:2}
-.rt-left{flex:1;display:flex;flex-direction:column}
-.rt-num{font-size:62px;font-weight:900;letter-spacing:-3px;line-height:1;color:#1a2e44;transition:color 1.4s;font-variant-numeric:tabular-nums}
-.rt-unit{font-size:15px;font-weight:400;color:rgba(30,50,80,.55);margin-top:4px}
-.rt-pill{display:inline-flex;align-items:center;gap:6px;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.7);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:500;color:#2a4a6a;margin-top:10px;width:fit-content;transition:background 1.4s,color 1.4s}
-.rt-div{width:1px;background:rgba(30,60,100,.12);align-self:stretch;margin:0 20px;flex-shrink:0}
-.rt-right{width:180px;display:flex;flex-direction:column;align-items:center;gap:6px}
-.rt-gauge{position:relative;width:100%;height:110px}
-.rt-ruler{position:absolute;left:6px;top:8px;width:14px;height:92px;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-end}
-.rt-tick{height:1px;background:rgba(30,60,100,.2)}
-.rt-tick.maj{width:12px;background:rgba(30,60,100,.35)}
-.rt-tick.min{width:6px}
-.rt-water-scene{position:absolute;left:26px;right:0;top:8px;height:96px;overflow:hidden;border-radius:0 10px 10px 0}
-.rt-water-logo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:110px;height:110px;object-fit:contain;opacity:0.30;pointer-events:none;z-index:2;filter:brightness(0) invert(1)}
-.rt-water-body{position:absolute;bottom:0;left:0;right:0;transition:height 1.6s cubic-bezier(.4,0,.2,1)}
-.rt-wave1{position:absolute;top:-14px;left:0;width:200%;animation:rtwv1 2.8s linear infinite}
-.rt-wave2{position:absolute;top:-8px;left:0;width:200%;animation:rtwv2 3.9s linear infinite;opacity:.5}
-@keyframes rtwv1{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@keyframes rtwv2{from{transform:translateX(-50%)}to{transform:translateX(0)}}
-#rtFill{position:absolute;top:16px;bottom:0;left:0;right:0;transition:background 1.4s}
-.rt-arrow-wrap{position:absolute;right:8px;top:8px;z-index:4}
-.rt-arrow{transition:transform .7s cubic-bezier(.4,0,.2,1)}
-.rt-time{text-align:center}
-.rt-time-lbl{font-size:9px;color:rgba(30,50,80,.55);letter-spacing:.5px;text-transform:uppercase}
-.rt-time-val{font-size:12px;font-weight:600;color:#1a2e44;margin-top:1px;letter-spacing:-.2px}
-.rt-time-next{font-size:9px;color:rgba(30,50,80,.45);margin-top:3px}
-.rt-footer{display:flex;align-items:center;justify-content:space-between;margin-top:10px;position:relative;z-index:2}
-.rt-footer-src{font-size:10px;color:rgba(30,50,80,.45)}
-.rt-dev{font-size:9px;color:rgba(30,50,80,.35);font-weight:500;letter-spacing:.3px;text-transform:uppercase}
-</style>
-</head>
-<body>
-<div class="rt-scene" id="rtScene">
-  <div class="rt-rain" id="rtRain"></div>
-  <div class="rt-header">
-    <div class="rt-logo-area">
-      <div class="rt-logo-box">
-        <img src="https://www.sjbmilgrau.com.br/wp-content/uploads/2026/05/IMG_7587.png" alt="SJB" onerror="this.style.display='none';document.getElementById('rtLogoFb').style.display='block'">
-        <span class="rt-logo-fallback" id="rtLogoFb" style="display:none">SJB</span>
-      </div>
-      <div>
-        <div class="rt-title">Nível do Rio Tijucas</div>
-        <div class="rt-sub">Monitoramento em tempo real · São João Batista/SC</div>
-      </div>
-    </div>
-  </div>
-  <div class="rt-body">
-    <div class="rt-left">
-      <div class="rt-num" id="rtNum">—</div>
-      <div class="rt-unit">metros (cota)</div>
-      <div class="rt-pill" id="rtPill"><span id="rtIcon"></span><span id="rtLabel">Carregando...</span></div>
-    </div>
-    <div class="rt-div"></div>
-    <div class="rt-right">
-      <div class="rt-gauge">
-        <div class="rt-ruler" id="rtRuler"></div>
-        <div class="rt-water-scene">
-          <img class="rt-water-logo" src="https://www.sjbmilgrau.com.br/wp-content/uploads/2026/05/IMG_7587.png" alt="">
-          <div class="rt-water-body" id="rtWaterBody" style="height:20px">
-            <svg class="rt-wave1" viewBox="0 0 800 20" preserveAspectRatio="none" height="20">
-              <path id="rtW1" fill="rgba(55,138,221,.75)" d="M0,10 C100,0 200,20 400,10 C600,0 700,20 800,10 L800,20 L0,20Z"/>
-            </svg>
-            <svg class="rt-wave2" viewBox="0 0 800 20" preserveAspectRatio="none" height="20">
-              <path id="rtW2" fill="rgba(55,138,221,.4)" d="M0,6 C150,18 300,2 400,12 C500,20 650,2 800,8 L800,20 L0,20Z"/>
-            </svg>
-            <div id="rtFill" style="position:absolute;top:16px;bottom:0;left:0;right:0;background:rgba(55,138,221,.55)"></div>
-          </div>
-        </div>
-        <div class="rt-arrow-wrap" id="rtArrowWrap" style="display:none">
-          <svg class="rt-arrow" id="rtArrow" width="32" height="32" viewBox="0 0 38 38">
-            <defs>
-              <linearGradient id="rtGfall" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#378ADD"/><stop offset="100%" stop-color="#0C447C"/></linearGradient>
-              <linearGradient id="rtGrise0" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#5baae8"/><stop offset="100%" stop-color="#1860a8"/></linearGradient>
-              <linearGradient id="rtGrise1" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#3880c8"/><stop offset="100%" stop-color="#073878"/></linearGradient>
-              <linearGradient id="rtGrise2" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#1a60a8"/><stop offset="100%" stop-color="#042c58"/></linearGradient>
-              <linearGradient id="rtGrise3" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#f0b050"/><stop offset="100%" stop-color="#a06010"/></linearGradient>
-              <linearGradient id="rtGrise4" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#f09030"/><stop offset="100%" stop-color="#904010"/></linearGradient>
-              <linearGradient id="rtGrise5" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#e86020"/><stop offset="100%" stop-color="#802010"/></linearGradient>
-              <linearGradient id="rtGrise6" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#e04040"/><stop offset="100%" stop-color="#801010"/></linearGradient>
-            </defs>
-            <circle cx="19" cy="19" r="18" id="rtArrowCircle" fill="url(#rtGfall)" opacity=".93"/>
-            <path d="M19 11L19 27M12 18L19 11L26 18" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none" id="rtArrowPath"/>
-          </svg>
-        </div>
-      </div>
-      <div class="rt-time">
-        <div class="rt-time-lbl">Última leitura ANA</div>
-        <div class="rt-time-val" id="rtTime">—</div>
-        <div class="rt-time-next" id="rtNext">Próxima: —</div>
-      </div>
-    </div>
-  </div>
-  <div class="rt-footer">
-    <span class="rt-footer-src">Fonte: ANA · SNIRH</span>
-    <span class="rt-dev">Desenvolvido por SJB Mil Grau</span>
-  </div>
-</div>
-
-<script>
 (function(){
-  var API_BASE  = 'https://rio-tijucas.onrender.com';
-  var ESTACAO   = '84095500';
-  var INTERVALO = 60 * 1000; // 1 minuto — tenta sempre que possível, cache garante continuidade
-  var WATER_H   = 96;
-  var rainOn    = false;
-  var ultimosDados = null; // último array de items com ao menos 1 medição válida
+  var API = 'https://rio-tijucas.onrender.com/api/clima';
+  var css = '.rt-clima{position:relative;z-index:2;margin-top:12px;padding:12px 14px 10px;border-radius:16px;background:rgba(255,255,255,.42);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.7)}'
+  + '.rt-cl-hero{display:flex;align-items:center;gap:12px}'
+  + '.rt-cl-ico{width:46px;height:46px;flex-shrink:0;border-radius:14px;background:rgba(255,255,255,.55);border:1px solid rgba(255,255,255,.75);display:flex;align-items:center;justify-content:center}'
+  + '.rt-cl-ico svg{width:30px;height:30px}'
+  + '.rt-cl-h{font-size:17px;font-weight:700;letter-spacing:-.4px;line-height:1.15}'
+  + '.rt-cl-s{font-size:12px;color:rgba(30,50,80,.7);margin-top:2px}'
+  + '.rt-cl-bars,.rt-cl-hrs{display:grid;grid-template-columns:repeat(12,1fr);gap:4px}'
+  + '.rt-cl-bars{align-items:end;height:38px;margin-top:12px}'
+  + '.rt-cl-b{border-radius:4px 4px 2px 2px;min-height:4px;transition:height 1.2s cubic-bezier(.4,0,.2,1),background 1.4s}'
+  + '.rt-cl-b.z{opacity:.28}'
+  + '.rt-cl-hrs{margin-top:4px}.rt-cl-hrs span{font-size:9px;color:rgba(30,50,80,.55);text-align:center;white-space:nowrap;overflow:visible}'
+  + '.rt-cl-badge{margin-top:9px;font-size:11.5px;font-weight:600;border-radius:20px;padding:6px 12px;width:fit-content;border:1px solid rgba(255,255,255,.7)}'
+  + '.rt-cl-note{font-size:9px;color:rgba(30,50,80,.4);margin-top:7px}'
+  + '.rt-cl-ov{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.2s}.rt-cl-ov.on{opacity:1}'
+  + '.rt-cl-d{position:absolute;width:1.5px;border-radius:2px;opacity:.5;animation:rtclf linear infinite}'
+  + '@keyframes rtclf{from{transform:translateY(-40px)}to{transform:translateY(560px)}}'
+  + '@keyframes rtcld{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(3px);opacity:1}}'
+  + '.rt-cl-ico .dr{animation:rtcld 1.1s ease-in-out infinite}.rt-cl-ico .dr:nth-child(2){animation-delay:.25s}.rt-cl-ico .dr:nth-child(3){animation-delay:.5s}';
+  var st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
-  var COLOR_SCALE = [
-    {maxCm:50,   bg:'linear-gradient(145deg,#dce8f5 0%,#c2d8ee 40%,#a8c8e4 100%)',shadow:'0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6)',water1:'rgba(55,138,221,.70)',water2:'rgba(55,138,221,.38)',fill:'rgba(55,138,221,.50)',num:'#0c447c',pill:'rgba(200,225,248,.60)',pillText:'#0c447c',arrowGrad:'rtGrise0'},
-    {maxCm:100,  bg:'linear-gradient(145deg,#d4e4f4 0%,#b8cee8 40%,#9abede 100%)',shadow:'0 8px 40px rgba(24,60,120,0.13),inset 0 1px 0 rgba(255,255,255,0.6)',water1:'rgba(42,120,205,.75)',water2:'rgba(42,120,205,.40)',fill:'rgba(42,120,205,.55)',num:'#0a3a6a',pill:'rgba(185,218,245,.65)',pillText:'#0a3a6a',arrowGrad:'rtGrise0'},
-    {maxCm:200,  bg:'linear-gradient(145deg,#c4d8f0 0%,#a4bfe4 40%,#84a8d8 100%)',shadow:'0 8px 40px rgba(20,55,115,0.15),inset 0 1px 0 rgba(255,255,255,0.55)',water1:'rgba(28,100,185,.78)',water2:'rgba(28,100,185,.42)',fill:'rgba(28,100,185,.60)',num:'#07305e',pill:'rgba(168,208,240,.65)',pillText:'#07305e',arrowGrad:'rtGrise1'},
-    {maxCm:300,  bg:'linear-gradient(145deg,#b0c8e4 0%,#8aaece 40%,#6898bc 100%)',shadow:'0 8px 40px rgba(16,50,110,0.18),inset 0 1px 0 rgba(255,255,255,0.5)',water1:'rgba(16,80,160,.82)',water2:'rgba(16,80,160,.45)',fill:'rgba(16,80,160,.65)',num:'#042c53',pill:'rgba(148,195,232,.65)',pillText:'#042c53',arrowGrad:'rtGrise2'},
-    {maxCm:400,  bg:'linear-gradient(145deg,#f5e8d0 0%,#ecd4a0 40%,#e0bc72 100%)',shadow:'0 8px 40px rgba(160,90,10,0.18),inset 0 1px 0 rgba(255,255,255,0.5)',water1:'rgba(185,115,20,.82)',water2:'rgba(185,115,20,.45)',fill:'rgba(185,115,20,.65)',num:'#633806',pill:'rgba(250,199,117,.65)',pillText:'#633806',arrowGrad:'rtGrise3'},
-    {maxCm:500,  bg:'linear-gradient(145deg,#f5d8b0 0%,#edb870 40%,#e0963a 100%)',shadow:'0 8px 40px rgba(160,70,10,0.20),inset 0 1px 0 rgba(255,255,255,0.45)',water1:'rgba(210,110,15,.85)',water2:'rgba(210,110,15,.48)',fill:'rgba(210,110,15,.68)',num:'#854f0b',pill:'rgba(250,175,80,.65)',pillText:'#854f0b',arrowGrad:'rtGrise4'},
-    {maxCm:600,  bg:'linear-gradient(145deg,#f5c8a0 0%,#ee9e58 40%,#e07430 100%)',shadow:'0 8px 40px rgba(170,55,10,0.22),inset 0 1px 0 rgba(255,255,255,0.4)',water1:'rgba(230,90,10,.88)',water2:'rgba(230,90,10,.50)',fill:'rgba(230,90,10,.72)',num:'#993c1d',pill:'rgba(245,148,80,.65)',pillText:'#993c1d',arrowGrad:'rtGrise5'},
-    {maxCm:9999, bg:'linear-gradient(145deg,#f5b8a8 0%,#ee7868 40%,#e04040 100%)',shadow:'0 8px 40px rgba(180,30,30,0.25),inset 0 1px 0 rgba(255,255,255,0.35)',water1:'rgba(220,50,50,.88)',water2:'rgba(220,50,50,.50)',fill:'rgba(220,50,50,.72)',num:'#791f1f',pill:'rgba(240,120,120,.65)',pillText:'#791f1f',arrowGrad:'rtGrise6'}
-  ];
-
-  function getColorConf(cm){
-    for(var i=0;i<COLOR_SCALE.length;i++){if(cm<COLOR_SCALE[i].maxCm)return COLOR_SCALE[i];}
-    return COLOR_SCALE[COLOR_SCALE.length-1];
+  var scene = document.getElementById('rtScene');
+  var ov = document.createElement('div'); ov.className = 'rt-cl-ov';
+  for (var i = 0; i < 70; i++) {
+    var d = document.createElement('div'); d.className = 'rt-cl-d';
+    d.style.cssText = 'left:' + Math.random()*100 + '%;top:-' + Math.random()*100 + 'px;height:' + (8+Math.random()*16) + 'px;background:rgba(100,165,230,' + (.3+Math.random()*.3) + ');animation-duration:' + (.55+Math.random()*.55) + 's;animation-delay:-' + Math.random()*1.5 + 's';
+    ov.appendChild(d);
   }
+  scene.insertBefore(ov, scene.firstChild);
 
-  function buildRuler(){
-    var r=document.getElementById('rtRuler');r.innerHTML='';
-    for(var i=0;i<13;i++){var d=document.createElement('div');d.className='rt-tick '+(i%3===0?'maj':'min');r.appendChild(d);}
+  var box = document.createElement('div'); box.className = 'rt-clima'; box.style.display = 'none';
+  box.innerHTML = '<div class="rt-cl-hero"><div class="rt-cl-ico" id="rtClIco"></div><div><div class="rt-cl-h" id="rtClH"></div><div class="rt-cl-s" id="rtClS"></div></div></div>'
+    + '<div class="rt-cl-bars" id="rtClBars"></div><div class="rt-cl-hrs" id="rtClHrs"></div>'
+    + '<div class="rt-cl-badge" id="rtClBadge" style="display:none"></div>'
+    + '<div class="rt-cl-note">Previsão Open-Meteo · pode mudar, não é garantia</div>';
+  var footer = document.querySelector('.rt-footer');
+  footer.parentNode.insertBefore(box, footer);
+
+  var ICO = {
+    sol: '<svg viewBox="0 0 32 32" fill="none" stroke="#e8a020" stroke-width="2.4" stroke-linecap="round"><circle cx="16" cy="16" r="5.5" fill="#f7c948"/><path d="M16 3v3M16 26v3M3 16h3M26 16h3M6.8 6.8l2.1 2.1M23.1 23.1l2.1 2.1M6.8 25.2l2.1-2.1M23.1 8.9l2.1-2.1"/></svg>',
+    nuvem: '<svg viewBox="0 0 32 32" fill="none" stroke="#4a6f9c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21a5.5 5.5 0 010-11 7 7 0 0113.5 1.5A4.7 4.7 0 0122 21z" fill="#dbe7f5"/><path d="M11 25l-1.2 2.5M17 25l-1.2 2.5M23 25l-1.2 2.5" stroke="#378ADD"/></svg>',
+    chuva: '<svg viewBox="0 0 32 32" fill="none" stroke="#2a5a92" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18a5.5 5.5 0 010-11 7 7 0 0113.5 1.5A4.7 4.7 0 0122 18z" fill="#b9d0ea"/><g stroke="#378ADD"><path class="dr" d="M10 22l-1.4 3.5"/><path class="dr" d="M16 22l-1.4 3.5"/><path class="dr" d="M22 22l-1.4 3.5"/></g></svg>'
+  };
+  var clima = null, T = 0.2;
+
+  function rio(){
+    var cm = parseFloat(document.getElementById('rtNum').textContent.replace(',', '.')) * 100;
+    return { cm: isNaN(cm) ? null : cm, subindo: document.getElementById('rtLabel').textContent.toLowerCase().indexOf('subindo') > -1 };
   }
+  function hr(i){ return clima.horas[i].slice(11, 13) + 'h'; }
 
-  function pad(n){return String(n).padStart(2,'0');}
-
-  function fmtCota(cm){
-    var m=cm/100;
-    var abs=Math.abs(m).toFixed(2).replace('.',',');
-    return (m<0?'-':(m>0?'+':''))+abs;
-  }
-
-  function fmtTime(d){
-    return pad(d.getHours())+'h'+pad(d.getMinutes())+' '+pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+String(d.getFullYear()).slice(2);
-  }
-
-  function proxAtualizacao(){
-    var now = new Date();
-    var prox = new Date(now);
-    prox.setSeconds(0);
-    if(now.getMinutes() < 7){
-      prox.setMinutes(7);
+  function draw(){
+    if (!clima) return;
+    var mm = clima.mm, prob = clima.prob || [], cor = getComputedStyle(document.getElementById('rtNum')).color;
+    var agora = mm[0] >= T, ini = -1, fim = -1, i;
+    for (i = 0; i < mm.length; i++) if (mm[i] >= T) { ini = i; break; }
+    if (agora) for (i = 1; i < mm.length; i++) if (mm[i] < T) { fim = i; break; }
+    var max = Math.max.apply(null, mm), pmax = prob.length ? Math.max.apply(null, prob) : null;
+    var forca = max < 2.5 ? 'fraca' : max < 7.5 ? 'moderada' : 'forte';
+    var h, s, ico;
+    if (agora) {
+      h = 'Está chovendo agora'; ico = ICO.chuva;
+      s = (fim > 0 ? 'Deve parar por volta das ' + hr(fim) : 'Deve continuar nas próximas horas') + ' · chuva ' + forca;
+    } else if (ini > 0) {
+      h = 'Vai chover'; ico = ICO.nuvem;
+      s = 'Começa por volta das ' + hr(ini) + ' · chuva ' + forca + (pmax !== null ? ' · ' + pmax + '% de chance' : '');
     } else {
-      prox.setHours(prox.getHours() + 1);
-      prox.setMinutes(7);
+      h = 'Sem chuva por enquanto'; ico = ICO.sol; s = 'Nas próximas 12 horas o tempo segue seco';
     }
-    return 'Próxima: ' + pad(prox.getHours()) + 'h' + pad(prox.getMinutes());
-  }
+    var H = document.getElementById('rtClH'); H.textContent = h; H.style.color = cor;
+    document.getElementById('rtClS').textContent = s;
+    document.getElementById('rtClIco').innerHTML = ico;
 
-  function render(cotaCm, md, dataLeitura){
-    var conf = getColorConf(cotaCm !== null ? cotaCm : 0);
-    var scene = document.getElementById('rtScene');
-    scene.style.background = conf.bg;
-    scene.style.boxShadow  = conf.shadow;
-    document.getElementById('rtNum').textContent = cotaCm !== null ? fmtCota(cotaCm) : '—';
-    document.getElementById('rtNum').style.color = conf.num;
-    var MIN_CM = -50, MAX_CM = 800;
-    var pct = cotaCm !== null ? Math.min(Math.max((cotaCm - MIN_CM) / (MAX_CM - MIN_CM), 0.04), 0.97) : 0.1;
-    document.getElementById('rtWaterBody').style.height = Math.round(pct * WATER_H) + 'px';
-    document.getElementById('rtW1').setAttribute('fill', conf.water1);
-    document.getElementById('rtW2').setAttribute('fill', conf.water2);
-    document.getElementById('rtFill').style.background = conf.fill;
-    var texts = {rising:'Rio subindo', falling:'Rio baixando', stable:'Nível estável'};
-    var icons  = {rising:'↑ ', falling:'↓ ', stable:''};
-    document.getElementById('rtIcon').textContent  = icons[md]  || '';
-    document.getElementById('rtLabel').textContent = texts[md] || 'Aguardando dados';
-    var pill = document.getElementById('rtPill');
-    pill.style.background = conf.pill;
-    pill.style.color      = conf.pillText;
-    var arrowWrap = document.getElementById('rtArrowWrap');
-    var circle    = document.getElementById('rtArrowCircle');
-    var arrowPath = document.getElementById('rtArrowPath');
-    if(md === 'stable'){
-      arrowWrap.style.display = 'none';
-    } else {
-      arrowWrap.style.display = 'block';
-      if(md === 'rising'){
-        circle.setAttribute('fill', 'url(#' + conf.arrowGrad + ')');
-        arrowPath.setAttribute('d', 'M19 27L19 11M12 20L19 11L26 20');
-      } else {
-        circle.setAttribute('fill', 'url(#rtGfall)');
-        arrowPath.setAttribute('d', 'M19 11L19 27M12 18L19 27L26 18');
-      }
-    }
-    document.getElementById('rtTime').textContent = fmtTime(dataLeitura || new Date());
-    document.getElementById('rtNext').textContent = proxAtualizacao();
-  }
-
-  function processarItems(items){
-    // Filtra apenas itens com Cota válida (não nula, não NaN)
-    var validos = items.filter(function(i){
-      return i.Cota_Adotada !== null &&
-             i.Cota_Adotada !== undefined &&
-             !isNaN(parseFloat(i.Cota_Adotada));
+    var bars = document.getElementById('rtClBars'), hrs = document.getElementById('rtClHrs');
+    bars.innerHTML = ''; hrs.innerHTML = '';
+    mm.forEach(function(v, k){
+      var b = document.createElement('div'); b.className = 'rt-cl-b' + (v < T ? ' z' : '');
+      b.style.background = cor; b.style.height = Math.max(4, Math.round(v / Math.max(max, 4) * 38)) + 'px';
+      b.title = clima.horas[k].slice(11, 16) + ' · ' + v.toFixed(1).replace('.', ',') + ' mm';
+      bars.appendChild(b);
+      var sp = document.createElement('span'); sp.textContent = k === 0 ? 'agora' : (k % 3 === 0 ? hr(k) : ''); hrs.appendChild(sp);
     });
 
-    if(!validos.length) return false; // nenhum dado válido → sinaliza para usar cache
+    var r = rio(), t = clima.total12h, bd = document.getElementById('rtClBadge');
+    if (r.cm !== null && r.cm >= 300 && r.subindo && t >= 20) { bd.textContent = '🔴 Alerta: rio alto e subindo, com chuva forte vindo'; bd.style.background = 'rgba(224,64,64,.30)'; bd.style.color = '#791f1f'; bd.style.display = 'block'; }
+    else if ((r.subindo && t >= 15) || t >= 30) { bd.textContent = r.subindo ? '🟠 Atenção: o rio está subindo e vem chuva' : '🟠 Atenção: chuva forte prevista'; bd.style.background = 'rgba(240,144,48,.32)'; bd.style.color = '#7a3c08'; bd.style.display = 'block'; }
+    else bd.style.display = 'none';
 
-    validos.sort(function(a,b){
-      return new Date(a.Data_Hora_Medicao.replace(' ','T')) - new Date(b.Data_Hora_Medicao.replace(' ','T'));
-    });
-
-    var last = validos[validos.length - 1];
-    var cotaAtual = parseFloat(last.Cota_Adotada);
-
-    var prev = null;
-    for(var i = validos.length - 2; i >= 0; i--){
-      if(parseFloat(validos[i].Cota_Adotada) !== cotaAtual){ prev = validos[i]; break; }
-    }
-
-    var cotaAnterior = prev ? parseFloat(prev.Cota_Adotada) : cotaAtual;
-    var diff = cotaAtual - cotaAnterior;
-    var md   = diff > 0.5 ? 'rising' : diff < -0.5 ? 'falling' : 'stable';
-    var dataLeitura = new Date(last.Data_Hora_Medicao.replace(' ','T'));
-    var chuva = parseFloat(last.Chuva_Adotada || 0);
-
-    render(cotaAtual, md, dataLeitura);
-    setRain(chuva > 0.5);
-    return true;
+    ov.classList.toggle('on', agora);
+    box.style.display = 'block';
   }
 
-  function buildDrops(){
-    var l = document.getElementById('rtRain'); l.innerHTML = '';
-    for(var i = 0; i < 60; i++){
-      var d = document.createElement('div'); d.className = 'rt-drop';
-      var h = 8 + Math.random() * 16;
-      d.style.cssText = 'left:' + Math.random()*100 + '%;top:-' + Math.random()*100 +
-        'px;height:' + h + 'px;background:rgba(100,165,230,' + (0.3+Math.random()*0.3) +
-        ');animation-duration:' + (0.5+Math.random()*0.55) + 's;animation-delay:-' + Math.random()*1.5 + 's;';
-      l.appendChild(d);
-    }
+  async function carregar(){
+    try {
+      var res = await fetch(API); if (!res.ok) return;
+      var j = await res.json(); if (j && j.mm && j.mm.length) { clima = j; draw(); }
+    } catch (e) { console.warn('Clima fetch error:', e); }
   }
 
-  function setRain(on){
-    if(on === rainOn) return; rainOn = on;
-    if(on) buildDrops();
-    document.getElementById('rtRain').classList.toggle('on', on);
-  }
-
-  async function fetchDados(){
-    try{
-      var r = await fetch(API_BASE + '/api/dados/' + ESTACAO);
-
-      // Erro de rede ou servidor → mantém cache
-      if(!r.ok){
-        if(ultimosDados) processarItems(ultimosDados);
-        return;
-      }
-
-      var json = await r.json();
-      var items = json.items;
-
-      // Array vazio → mantém cache
-      if(!items || !items.length){
-        if(ultimosDados) processarItems(ultimosDados);
-        return;
-      }
-
-      // Tenta processar novos dados (filtra nulos internamente)
-      var ok = processarItems(items);
-
-      if(ok){
-        // Só substitui o cache se havia ao menos 1 medição válida nos novos dados
-        ultimosDados = items;
-      } else {
-        // Todos os itens vieram nulos → mantém cache anterior
-        if(ultimosDados) processarItems(ultimosDados);
-      }
-
-    } catch(e){
-      console.warn('Rio Tijucas fetch error:', e);
-      // Qualquer exceção → mantém cache
-      if(ultimosDados) processarItems(ultimosDados);
-    }
-  }
-
-  buildRuler();
-  render(null, 'stable', new Date());
-  fetchDados();
-  setInterval(fetchDados, INTERVALO);
+  var o = { childList: true, characterData: true, subtree: true };
+  new MutationObserver(draw).observe(document.getElementById('rtLabel'), o);
+  new MutationObserver(draw).observe(document.getElementById('rtNum'), o);
+  carregar(); setInterval(carregar, 10 * 60 * 1000);
 })();
-</script>
-</body>
-</html>
