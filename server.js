@@ -213,6 +213,6 @@ app.listen(PORT, () => {
   tentarAtualizar("inicialização").then(() => {
     agendarLoop();
     console.log("⏰ Agendador: :07, :14, :21, :28, :35, :42, :49, :56");
-    console.log("   Fallback automático DIAS_2 → DIAS_15 se sem dados\n");
+    console.log("   Fallback automático DIAS_2 → DIAS_10 se sem dados\n");
   });
 });
