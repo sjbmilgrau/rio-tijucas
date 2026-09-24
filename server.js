@@ -12,6 +12,10 @@ const PORT     = process.env.PORT || 3000;
 const ANA_BASE = "https://www.ana.gov.br/hidrowebservice/EstacoesTelemetricas";
 const ESTACAO  = "84095500";
 
+// Períodos de busca na ANA (o segundo é o fallback)
+const PERIODO_PADRAO   = "DIAS_2";
+const PERIODO_FALLBACK = "DIAS_14";
+
 const DOMINIOS_PERMITIDOS = [
   DOMINIO,
   DOMINIO.replace("https://","https://www."),
@@ -102,8 +106,8 @@ async function buscarDadosANA() {
   const token = await getToken();
   const fetch = (await import("node-fetch")).default;
 
-  // Tenta DIAS_2 primeiro, se vier vazio tenta DIAS_7
-  for (const periodo of ["DIAS_2", "DIAS_10"]) {
+  // Tenta o período padrão primeiro; se vier vazio, tenta o fallback
+  for (const periodo of [PERIODO_PADRAO, PERIODO_FALLBACK]) {
     const url = `${ANA_BASE}/HidroinfoanaSerieTelemetricaAdotada/v1?` +
       `C%C3%B3digo%20da%20Esta%C3%A7%C3%A3o=${ESTACAO}` +
       `&Tipo%20Filtro%20Data=DATA_LEITURA` +
@@ -122,7 +126,7 @@ async function buscarDadosANA() {
     }
     console.warn(`⚠️ Sem dados válidos com ${periodo}, tentando período maior...`);
   }
-  throw new Error("Sem dados válidos mesmo com DIAS_10");
+  throw new Error(`Sem dados válidos mesmo com ${PERIODO_FALLBACK}`);
 }
 
 // ── Agendador ──────────────────────────────────────────
@@ -213,6 +217,6 @@ app.listen(PORT, () => {
   tentarAtualizar("inicialização").then(() => {
     agendarLoop();
     console.log("⏰ Agendador: :07, :14, :21, :28, :35, :42, :49, :56");
-    console.log("   Fallback automático DIAS_2 → DIAS_10 se sem dados\n");
+    console.log(`   Fallback automático ${PERIODO_PADRAO} → ${PERIODO_FALLBACK} se sem dados\n`);
   });
 });
